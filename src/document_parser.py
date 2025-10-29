@@ -1,4 +1,3 @@
-# %%
 import re
 import logging
 from pathlib import Path
@@ -59,9 +58,9 @@ def parse_documents_in_directory(directory_path: Union[str, Path] = DATA_DIR_PAT
     if not isinstance(directory_path, Path):
         directory_path = Path(directory_path)
 
-    documents = []
+    documents: List[DoclingDocument] = []
     for file_path in directory_path.glob("*.pdf"):
-        document = parse_document(file_path)
+        document: DoclingDocument = parse_document(file_path)
         documents.append(document)
     return documents
 
@@ -122,7 +121,7 @@ def process_tables_in_document(document: DoclingDocument) -> str:
             processed_items.append(reference_string)
 
     logger.info(f"Finished processing {document.name}.")
-    return " ".join(processed_items)
+    return "  ".join(processed_items)
 
 
 TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
@@ -166,14 +165,37 @@ def insert_tables_into_chunk(chunk_text: str, table_dir: Path) -> str:
     return reconstructed_text
 
 
-# %% :
-doc = parse_document(Path(DATA_DIR_PATH, "2022 Q3 MSFT.pdf"))
-# %%
-print_items_from_document(doc)
-# %%
-table_text_chunk = process_tables_in_document(doc)
-# %%
-reconstructed = insert_tables_into_chunk(table_text_chunk, TABLE_DIR_PATH)
-print(reconstructed)
-# %%
-print(table_text_chunk)
+def prepare_document_for_chunking(file_path: Union[str, Path]) -> str:
+    """
+    Runs the full pipeline on a single document:
+    parsing, table processing, and reconstruction.
+    """
+    logger.info(f"Running full pipeline on document: {file_path}...")
+
+    parsed_doc = parse_document(file_path)
+    if parsed_doc is None:
+        logger.error(
+            f"Document parsing failed for {file_path}. Aborting pipeline.")
+        return ""
+
+    processed_doc: str = process_tables_in_document(parsed_doc)
+    return processed_doc
+
+
+def prepare_documents_in_directory_for_chunking(directory_path: Union[str, Path] = DATA_DIR_PATH) -> List[Tuple[Path, str]]:
+    """
+    Runs the full pipeline on all documents in a directory.
+    Returns a list of tuples containing file paths and their processed text.
+    """
+    logger.info(
+        f"Running full pipeline on documents in directory: {directory_path}...")
+
+    if not isinstance(directory_path, Path):
+        directory_path = Path(directory_path)
+
+    processed_documents = []
+    for file_path in directory_path.glob("*.pdf"):
+        processed_text = prepare_document_for_chunking(file_path)
+        processed_documents.append((file_path, processed_text))
+
+    return processed_documents
