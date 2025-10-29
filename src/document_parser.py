@@ -1,13 +1,15 @@
 # %%
+import re
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Union, List, Tuple, Final
+from collections import defaultdict
 
 from docling.document_converter import DocumentConverter
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 
-from utils.config import DATA_DIR_PATH
+from utils.config import DATA_DIR_PATH, TABLE_DIR_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -64,14 +66,114 @@ def parse_documents_in_directory(directory_path: Union[str, Path] = DATA_DIR_PAT
     return documents
 
 
+def process_tables_in_document(document: DoclingDocument) -> str:
+    """
+    Extracts and processes all table items from a document.
+    Saves tables as markdown and replaces them with a reference string.
+    """
+    logger.info(f"Processing tables in document {document.name}...")
+
+    base_file_name = Path(document.name).stem.replace(
+        " ", "_").replace(".", "_")
+
+    page_table_counts = defaultdict(int)
+
+    processed_items = []
+
+    for item, _ in document.iterate_items():
+        if isinstance(item, TextItem):
+            processed_items.append(item.text.strip())
+
+        elif isinstance(item, TableItem):
+
+            page_numbers = sorted(
+                set(prov.page_no for prov in item.prov if hasattr(prov, "page_no"))
+            )
+
+            page_num = -1
+            if page_numbers:
+                page_num = page_numbers[0]
+            else:
+                logger.warning(
+                    f"Could not find page number for a table in {document.name}. Defaulting to -1.")
+
+            table_num_on_page = page_table_counts[page_num]
+            page_table_counts[page_num] += 1
+
+            table_id = (
+                f"Table_{base_file_name}_p{page_num}_n{table_num_on_page}"
+            )
+
+            try:
+                table_md = item.export_to_markdown(doc=document)
+                table_filepath = TABLE_DIR_PATH / f"{table_id}.md"
+
+                with open(table_filepath, "w", encoding="utf-8") as f:
+                    f.write(table_md)
+
+            except IOError as e:
+                logger.error(f"Failed to save table {table_id}: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Failed to export table {table_id}: {e}")
+                continue
+
+            reference_string = f"\n\n[TABLE_REFERENCE: {table_id}]\n\n"
+            processed_items.append(reference_string)
+
+    logger.info(f"Finished processing {document.name}.")
+    return " ".join(processed_items)
+
+
+TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
+    r"\[TABLE_REFERENCE:\s*([^\]]+)\]"
+)
+
+
+def insert_tables_into_chunk(chunk_text: str, table_dir: Path) -> str:
+    """
+    Reconstructs a text chunk by replacing all table references
+    with their actual Markdown content from saved files.
+    """
+
+    # nested "replacer" function that re.sub will call for every match
+    def _load_table_content(match: re.Match) -> str:
+        """
+        This is a helper function called by re.sub.
+        It receives a match object and returns the replacement string.
+        """
+
+        table_id = match.group(1).strip()
+        table_filepath = table_dir / f"{table_id}.md"
+
+        try:
+            with open(table_filepath, "r", encoding="utf-8") as f:
+                table_md = f.read()
+            return f"\n\n{table_md}\n\n"
+
+        except FileNotFoundError:
+            logger.warning(f"Could not find table file: {table_filepath}")
+            return f"\n\n[TABLE_NOT_FOUND: {table_id}]\n\n"
+        except IOError as e:
+            logger.error(f"Error reading table file {table_filepath}: {e}")
+            return f"\n\n[TABLE_READ_ERROR: {table_id}]\n\n"
+
+    reconstructed_text = TABLE_REFERENCE_PATTERN.sub(
+        _load_table_content,
+        chunk_text
+    )
+
+    return reconstructed_text
+
+
 # %% :
-testing_path = Path(DATA_DIR_PATH.parent, "testing-data")
-table = parse_document(Path(testing_path, "table.pdf"))
-text = parse_document(Path(testing_path, "text.pdf"))
-table_text = parse_document(Path(testing_path, "table_text.pdf"))
+doc = parse_document(Path(DATA_DIR_PATH, "2022 Q3 MSFT.pdf"))
 # %%
-print_items_from_document(table)
+print_items_from_document(doc)
 # %%
-print_items_from_document(text)
+table_text_chunk = process_tables_in_document(doc)
 # %%
-print_items_from_document(table_text)
+reconstructed = insert_tables_into_chunk(table_text_chunk, TABLE_DIR_PATH)
+print(reconstructed)
+# %%
+print(table_text_chunk)
