@@ -37,12 +37,18 @@ def parse_document(file_path: Union[str, Path]) -> DoclingDocument:
     """
     logger.info(f"Parsing document at: {file_path}...")
 
-    result = converter.convert(file_path)
-    document = result.document
-    return document
+    try:
+        result = converter.convert(file_path)
+        document = result.document
+        if not document.name:
+            document.name = Path(file_path).name
+        return document
+    except Exception as e:
+        logger.error(f"Failed to parse document at {file_path}: {e}")
+        return None
 
 
-def parse_documents_in_directory(directory_path: Union[str, Path] = DATA_DIR_PATH):
+def parse_documents_in_directory(directory_path: Union[str, Path] = DATA_DIR_PATH) -> List[DoclingDocument]:
     """
     Locates and parses all PDF documents in a given directory.
     """
