@@ -22,23 +22,6 @@ class DocumentParser:
         if converter is None:
             self.converter = DocumentConverter()
 
-    @staticmethod
-    def print_items_from_document(document: DoclingDocument):
-        """
-        Utility function to print all text and table items from a document.
-        """
-        logger.info(f"Printing items from document {document.name}...")
-
-        for item, _ in document.iterate_items():
-            if isinstance(item, TableItem):
-                print("--- [TABLE START] ---")
-                print(item.export_to_markdown(doc=document))
-                print("--- [TABLE END] ---")
-            elif isinstance(item, TextItem):
-                print(item.text.strip())
-            else:
-                print(f"Unknown item type: {type(item)}")
-
     def parse_document(self, file_path: Union[str, Path]) -> DoclingDocument:
         """
             Parses a single document from a given full file path.
@@ -71,7 +54,7 @@ class DocumentParser:
         return documents
 
     @staticmethod
-    def process_tables_in_document(document: DoclingDocument) -> str:
+    def extract_tables_from_document(document: DoclingDocument, table_dir: Path = TABLE_DIR_PATH) -> str:
         """
         Extracts and processes all table items from a document.
         Saves tables as markdown and replaces them with a reference string.
@@ -111,7 +94,7 @@ class DocumentParser:
 
                 try:
                     table_md = item.export_to_markdown(doc=document)
-                    table_filepath = TABLE_DIR_PATH / f"{table_id}.md"
+                    table_filepath = table_dir / f"{table_id}.md"
 
                     with open(table_filepath, "w", encoding="utf-8") as f:
                         f.write(table_md)
@@ -130,7 +113,7 @@ class DocumentParser:
         return "\n\n".join(processed_items)
 
     @staticmethod
-    def insert_tables_into_chunk(chunk_text: str, table_dir: Path) -> str:
+    def insert_tables_into_chunk(chunk_text: str, table_dir: Path = TABLE_DIR_PATH) -> str:
         """
         Reconstructs a text chunk by replacing all table references
         with their actual Markdown content from saved files.
@@ -178,7 +161,7 @@ class DocumentParser:
                 f"Document parsing failed for {file_path}. Aborting pipeline.")
             return ""
 
-        processed_doc: str = self.process_tables_in_document(parsed_doc)
+        processed_doc: str = self.extract_tables_from_document(parsed_doc)
         return processed_doc
 
     def prepare_documents_in_directory_for_chunking(self, directory_path: Union[str, Path] = DATA_DIR_PATH) -> List[Tuple[Path, str]]:
@@ -198,3 +181,20 @@ class DocumentParser:
             processed_documents.append((file_path, processed_text))
 
         return processed_documents
+
+    @staticmethod
+    def print_items_from_document(document: DoclingDocument):
+        """
+        Utility function to print all text and table items from a document.
+        """
+        logger.info(f"Printing items from document {document.name}...")
+
+        for item, _ in document.iterate_items():
+            if isinstance(item, TableItem):
+                print("--- [TABLE START] ---")
+                print(item.export_to_markdown(doc=document))
+                print("--- [TABLE END] ---")
+            elif isinstance(item, TextItem):
+                print(item.text.strip())
+            else:
+                print(f"Unknown item type: {type(item)}")
