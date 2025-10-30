@@ -46,8 +46,8 @@ class QdrantDatabase:
     def add_chunks(self, chunks: List[str], collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME):
         embeddings = self.embedding_model.embed(chunks)
         # TODO add better payload and unique ID
-        points = (PointStruct(id=i, vector=embeddings[i], payload={
-            "text": chunks[i]}) for i in range(len(chunks)))
+        points = [PointStruct(id=i, vector=embeddings[i], payload={
+            "text": chunk}) for i, chunk in enumerate(chunks)]
 
         self.client.upsert(
             collection_name=collection_name,
