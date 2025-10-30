@@ -1,78 +1,96 @@
-import re
-from typing import List, Optional, Union
+from typing import List, Optional
 from pathlib import Path
 
-from utils.config import DATA_DIR_PATH, TEST_DATA_DIR_PATH, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
-from document_parser import prepare_document_for_chunking, print_items_from_document
+from utils.config import DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
 
 
-def fixed_chunking(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> List[str]:
-    """Split text into fixed-size chunks"""
-    chunks = []
-    for i in range(0, len(text), chunk_size):
-        chunk = text[i:i + chunk_size]
-        chunks.append(chunk)
-    return chunks
+class DocumentChunker:
+    def __init__(self, strategy: str = 'recursive', chunk_size: int = DEFAULT_CHUNK_SIZE, overlap: int = DEFAULT_CHUNK_OVERLAP, separators: Optional[List[str]] = None):
+        self.strategy = strategy
+        self.chunk_size = chunk_size
+        self.overlap = overlap
 
+        if separators is None:
+            self.separators = ["\n\n\n\n", "\n\n", "\n", ". ", " ", ""]
 
-def overlapping_chunking(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE, overlap: int = DEFAULT_CHUNK_OVERLAP) -> List[str]:
-    """Split text with overlapping windows"""
-    chunks = []
-    start = 0
+    def chunk_text(self, text: str) -> List[str]:
+        """Chunk document based on the selected strategy"""
 
-    while start < len(text):
-        end = start + chunk_size
-        chunk = text[start:end]
-        chunks.append(chunk)
+        if self.strategy == 'fixed':
+            return self._fixed_chunking(text)
 
-        if end >= len(text):
-            break
+        elif self.strategy == 'overlapping':
+            return self._overlapping_chunking(text)
 
-        start = end - overlap
+        elif self.strategy == 'recursive':
+            return self._recursive_character_chunking(text)
 
-    return chunks
+        else:
+            raise ValueError(f"Unknown chunking strategy: {self.strategy}")
 
+    def _fixed_chunking(self, text: str) -> List[str]:
+        """Split text into fixed-size chunks"""
+        chunks = []
+        for i in range(0, len(text), self.chunk_size):
+            chunk = text[i:i + self.chunk_size]
+            chunks.append(chunk)
+        return chunks
 
-def recursive_character_chunking(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE, separators: Optional[List[str]] = None) -> List[str]:
-    """Recursively split text using different separators"""
-    if separators is None:
-        separators = ["\n\n\n", "\n\n", "\n", ". ", "  ", " ", ""]
+    def _overlapping_chunking(self, text: str) -> List[str]:
+        """Split text with overlapping windows"""
+        chunks = []
+        start = 0
 
-    def _split_text(text, separators, chunk_size):
-        if len(text) <= chunk_size:
-            return [text]
+        while start < len(text):
+            end = start + self.chunk_size
+            chunk = text[start:end]
+            chunks.append(chunk)
 
-        for separator in separators:
-            if separator in text:
-                parts = text.split(separator)
-                chunks = []
-                current_chunk = ""
+            if end >= len(text):
+                break
 
-                for part in parts:
-                    test_chunk = current_chunk + separator + part if current_chunk else part
+            start = end - self.overlap
 
-                    if len(test_chunk) <= chunk_size:
-                        current_chunk = test_chunk
-                    else:
-                        if current_chunk:
-                            chunks.append(current_chunk)
-                        current_chunk = part
+        return chunks
 
-                if current_chunk:
-                    chunks.append(current_chunk)
+    def _recursive_character_chunking(self, text: str) -> List[str]:
+        """Recursively split text using different separators"""
 
-                # Recursively split large chunks
-                final_chunks = []
-                for chunk in chunks:
-                    if len(chunk) > chunk_size:
-                        final_chunks.extend(_split_text(
-                            chunk, separators[1:], chunk_size))
-                    else:
-                        final_chunks.append(chunk)
+        def _split_text(text, separators, chunk_size):
+            if len(text) <= chunk_size:
+                return [text]
 
-                return final_chunks
+            for separator in separators:
+                if separator in text:
+                    parts = text.split(separator)
+                    chunks = []
+                    current_chunk = ""
 
-        # If no separator works, split by characters
-        return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+                    for part in parts:
+                        test_chunk = current_chunk + separator + part if current_chunk else part
 
-    return _split_text(text, separators, chunk_size)
+                        if len(test_chunk) <= chunk_size:
+                            current_chunk = test_chunk
+                        else:
+                            if current_chunk:
+                                chunks.append(current_chunk)
+                            current_chunk = part
+
+                    if current_chunk:
+                        chunks.append(current_chunk)
+
+                    final_chunks = []
+                    for chunk in chunks:
+                        if len(chunk) > chunk_size:
+                            final_chunks.extend(_split_text(
+                                chunk, separators[1:], chunk_size))
+                        else:
+                            final_chunks.append(chunk)
+
+                    return final_chunks
+
+            # If no separator works, split by characters
+            return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+
+        # Call the helper function with the instance's state
+        return _split_text(text, self.separators, self.chunk_size)
