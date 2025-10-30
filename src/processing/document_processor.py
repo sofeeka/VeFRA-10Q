@@ -29,7 +29,7 @@ def process_document_for_chunking(document: DoclingDocument) -> str:
 
 
 @staticmethod
-def process_documents_for_chunking(self, documents: List[DoclingDocument]) -> List[str]:
+def process_documents_for_chunking(documents: List[DoclingDocument]) -> List[str]:
     """
     Processes documents to extract text and extract tables preparing them for chunking.
     """
