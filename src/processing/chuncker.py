@@ -1,7 +1,6 @@
 from typing import List, Optional
-from pathlib import Path
 
-from utils.config import DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
+from src.utils.config import DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
 
 
 class DocumentChunker:

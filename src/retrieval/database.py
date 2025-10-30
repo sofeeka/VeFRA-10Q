@@ -6,7 +6,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct
 
 from src.utils.config import DEFAULT_QDRANT_COLLECTION_NAME, DEFAULT_QDRANT_STORAGE_PATH, DEFAULT_QDRANT_DISTANCE_METRIC, DEFAULT_SEARCH_K
-from src.embedder import EmbeddingModel
+from src.retrieval.embedder import EmbeddingModel
 
 
 class ChunkPayload(BaseModel):

@@ -8,7 +8,7 @@ from docling.document_converter import DocumentConverter
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 
-from .utils.config import DATA_DIR_PATH, TABLE_DIR_PATH
+from src.utils.config import SOURCE_DATA_DIR_PATH, TABLE_DIR_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class DocumentParser:
             logger.error(f"Failed to parse document at {file_path}: {e}")
             return None
 
-    def parse_documents_in_directory(self, directory_path: Union[str, Path] = DATA_DIR_PATH) -> List[DoclingDocument]:
+    def parse_documents_in_directory(self, directory_path: Union[str, Path] = SOURCE_DATA_DIR_PATH) -> List[DoclingDocument]:
         """
         Locates and parses all PDF documents in a given directory.
         """
@@ -164,7 +164,7 @@ class DocumentParser:
         processed_doc: str = self.extract_tables_from_document(parsed_doc)
         return processed_doc
 
-    def prepare_documents_in_directory_for_chunking(self, directory_path: Union[str, Path] = DATA_DIR_PATH) -> List[Tuple[Path, str]]:
+    def prepare_documents_in_directory_for_chunking(self, directory_path: Union[str, Path] = SOURCE_DATA_DIR_PATH) -> List[Tuple[Path, str]]:
         """
         Runs the full pipeline on all documents in a directory.
         Returns a list of tuples containing file paths and their processed text.
