@@ -8,7 +8,7 @@ from docling.document_converter import DocumentConverter
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 
-from utils.config import DATA_DIR_PATH, TABLE_DIR_PATH
+from .utils.config import DATA_DIR_PATH, TABLE_DIR_PATH
 
 logger = logging.getLogger(__name__)
 
