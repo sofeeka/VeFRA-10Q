@@ -45,6 +45,7 @@ def process_chunk_after_retrieval(chunk: str) -> str:
     Processes a retrieved text chunk to insert tables back into the text.
     """
     logger.info(f"Processing a retrieved chunk with length {len(chunk)}...")
+    logger.info(f"\n---\n{chunk}\n---\n")
 
     processed_chunk = _insert_tables_into_chunk(chunk_text=chunk)
     return processed_chunk
