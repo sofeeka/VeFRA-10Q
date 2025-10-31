@@ -21,20 +21,26 @@ class ChunkPayload(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-class QdrantDatabase:  # TODO think of a better way of setting default qdrant collection name
+class QdrantDatabase:
 
-    def __init__(self, embedding_model: EmbeddingModel, path: str = DEFAULT_QDRANT_STORAGE_PATH):
+    def __init__(self, embedding_model: EmbeddingModel = None, path: str = DEFAULT_QDRANT_STORAGE_PATH, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME):
         logging.info("Initializing Qdrant Database...")
+
+        if not embedding_model:
+            logging.info("Using default embedding model for the database.")
+            embedding_model = EmbeddingModel()
+
         self.embedding_model = embedding_model
 
         logging.info(f"Creating Qdrant client at {path}...")
         self.client = QdrantClient(path=path)
+        self.collection_name = collection_name
 
-    def recreate_collection(self, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME, vector_params: Any = None) -> bool:
+    def recreate_collection(self, vector_params: Any = None) -> bool:
         """
         Recreate a Qdrant collection with specified vector parameters.
         """
-        logging.info(f"Recreating collection '{collection_name}'...")
+        logging.info(f"Recreating collection '{self.collection_name}'...")
 
         if vector_params is None:
             vector_params = {
@@ -43,24 +49,39 @@ class QdrantDatabase:  # TODO think of a better way of setting default qdrant co
             }
 
         result: bool = self.client.recreate_collection(
-            collection_name=collection_name,
+            collection_name=self.collection_name,
             vectors_config=vector_params
         )
 
         return result
 
-    def add_chunks(self, chunks: List[str], collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME) -> bool:
+    def add_chunks(self, chunks: List[str]) -> bool:
+        """
+        Embed and add text chunks to the Qdrant collection.
+        """
+
         embeddings = self.embedding_model.embed(chunks)
+
+        if not embeddings or len(embeddings) != len(chunks):
+            logger.error(
+                "Embedding failed or returned mismatched number of embeddings.")
+            return False
+
         # TODO add better payload and unique ID
         points = [PointStruct(id=i, vector=embeddings[i], payload={
             "text": chunk}) for i, chunk in enumerate(chunks)]
 
+        if not points:
+            logger.error(
+                "Embedded data successfully, but found no points to upsert.")
+            return False
+
         result: types.UpdateResult = self.client.upsert(
-            collection_name=collection_name,
+            collection_name=self.collection_name,
             points=points
         )
 
-        status = result.status
+        status: types.UpdateStatus = result.status
 
         if status == types.UpdateStatus.COMPLETED:
             logger.info(
@@ -75,11 +96,15 @@ class QdrantDatabase:  # TODO think of a better way of setting default qdrant co
             logger.error(f"Upsert failed with status: {result.status}")
             return False
 
-    def get_search_results(self, query: str, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME, limit: int = DEFAULT_SEARCH_K) -> list[ScoredPoint]:
-        query_vector = self.embedding_model.embed(query)[0]
+    def get_search_results(self, query: str, limit: int = DEFAULT_SEARCH_K) -> list[ScoredPoint]:
+        """
+        Queries the Qdrant collection for similar chunks based on the input query.
+        """
 
-        search_results = self.client.search(
-            collection_name=collection_name,
+        query_vector: List[float] = self.embedding_model.embed(query)[0]
+
+        search_results: List[types.ScoredPoint] = self.client.search(
+            collection_name=self.collection_name,
             query_vector=query_vector,
             limit=limit,
             with_payload=True
@@ -87,15 +112,19 @@ class QdrantDatabase:  # TODO think of a better way of setting default qdrant co
 
         return search_results
 
-    def get_related_chunks(self, query: str, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME, limit: int = DEFAULT_SEARCH_K) -> List[str]:
-        results = self.get_search_results(
-            query=query, collection_name=collection_name, limit=limit)
+    def get_related_chunks(self, query: str, limit: int = DEFAULT_SEARCH_K) -> List[str]:
+        """
+        Retrieves text chunks related to the input query.
+        """
+
+        results: list[ScoredPoint] = self.get_search_results(
+            query=query, collection_name=self.collection_name, limit=limit)
 
         if not results:
             return []
 
-        chunks = [result.payload['text']
-                  for result in results
-                  if result.payload and 'text' in result.payload]
+        chunks: List[str] = [result.payload['text']
+                             for result in results
+                             if result.payload and 'text' in result.payload]
 
         return chunks
