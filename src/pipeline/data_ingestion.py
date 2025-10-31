@@ -6,13 +6,14 @@ from docling_core.types.doc import DoclingDocument
 from src.processing.document_parser import DocumentParser
 from src.processing.document_processor import process_documents_for_chunking, process_document_for_chunking
 from src.processing.chuncker import DocumentChunker
-from src.retrieval.database import QdrantDatabase
+from src.retrieval.database import QdrantDatabase, ChunkPayload
 
 from src.utils.config import SOURCE_DATA_DIR_PATH
 
 logger = logging.getLogger(__name__)
 
 
+# TODO: remove duplication, refactor to reuse ingestion of single file
 def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase):
     # PDF -> Docling
     parser = DocumentParser()
@@ -30,8 +31,16 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase
         c = chunker.chunk_text(text)
         chunks.extend(c)
 
-    # Text Chunks -> Database
-    db.add_chunks(chunks=chunks)
+    # Text Chunks -> ChunkPayloads
+    chunk_payloads: List[ChunkPayload] = [
+        ChunkPayload(
+            text=chunk,
+            metadata={}  # TODO: add metadata
+        ) for chunk in chunks
+    ]
+
+    # ChunkPayloads -> Database
+    db.add_chunks(chunks=chunk_payloads)
 
 
 def ingest_single_document(file_path: str, db: QdrantDatabase) -> bool:
@@ -63,8 +72,16 @@ def ingest_single_document(file_path: str, db: QdrantDatabase) -> bool:
                 f"Parsed, processed, but failed to chunk document: {file_path}")
             return False
 
-        # Text Chunks -> Database
-        result = db.add_chunks(chunks=chunks)
+        # Text Chunks -> ChunkPayloads
+        chunk_payloads: List[ChunkPayload] = [
+            ChunkPayload(
+                text=chunk,
+                metadata={}  # TODO: add metadata
+            ) for chunk in chunks
+        ]
+
+        # ChunkPayloads -> Database
+        result: bool = db.add_chunks(chunks=chunk_payloads)
 
         if not result:
             logger.error(
