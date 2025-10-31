@@ -47,7 +47,7 @@ def ingest_single_document(file_path: str, db: QdrantDatabase):
 
         # Docling -> Processed Text
         processed_text: str = process_document_for_chunking(
-            documents=[parsed_doc])
+            document=parsed_doc)
 
         if not processed_text:
             logger.error(
