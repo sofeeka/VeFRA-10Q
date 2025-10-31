@@ -1,3 +1,4 @@
+import uuid
 import logging
 from pydantic import BaseModel, Field
 from typing import List, Any, Dict
@@ -19,6 +20,7 @@ class ChunkPayload(BaseModel):
     """
     text: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
 class QdrantDatabase:
@@ -55,21 +57,26 @@ class QdrantDatabase:
 
         return result
 
-    def add_chunks(self, chunks: List[str]) -> bool:
+    def add_chunks(self, chunks: List[ChunkPayload]) -> bool:
         """
         Embed and add text chunks to the Qdrant collection.
         """
 
-        embeddings = self.embedding_model.embed(chunks)
+        texts_to_embed = [chunk.text for chunk in chunks]
+        embeddings = self.embedding_model.embed(texts_to_embed)
 
         if not embeddings or len(embeddings) != len(chunks):
             logger.error(
                 "Embedding failed or returned mismatched number of embeddings.")
             return False
 
-        # TODO add better payload and unique ID
-        points = [PointStruct(id=i, vector=embeddings[i], payload={
-            "text": chunk}) for i, chunk in enumerate(chunks)]
+        points = [
+            PointStruct(
+                id=chunk.id,
+                vector=embeddings[i],
+                payload=chunk.model_dump()
+            ) for i, chunk in enumerate(chunks)
+        ]
 
         if not points:
             logger.error(
