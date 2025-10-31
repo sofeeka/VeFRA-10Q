@@ -8,7 +8,8 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 
 from src.pipeline.data_ingestion import ingest_single_document
 from src.retrieval.database import QdrantDatabase
-from src.retrieval.embedder import FastEmbedModel
+
+from src.dependency import get_qdrant_database
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,7 +36,8 @@ async def create_upload_file(file: UploadFile = File(...)):
 
         logger.info(
             f"Received file: {file.filename}. Saved to: {temp_file_path}")
-        db = QdrantDatabase(embedding_model=FastEmbedModel())
+
+        db: QdrantDatabase = get_qdrant_database()
         success = ingest_single_document(file_path=temp_file_path, db=db)
 
         if success:

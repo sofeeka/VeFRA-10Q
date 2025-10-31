@@ -1,12 +1,10 @@
 import logging
 from pathlib import Path
-from typing import Union, List, Tuple
+from typing import Union, List
 
 from docling.document_converter import DocumentConverter
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
-
-from src.utils.config import SOURCE_DATA_DIR_PATH, TABLE_DIR_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +16,7 @@ class DocumentParser:
 
     def parse_document(self, file_path: Union[str, Path]) -> DoclingDocument:
         """
-            Parses a single document from a given full file path.
+        Parses a single document from a given full file path.
         """
         logger.info(f"Parsing document at: {file_path}...")
 
@@ -32,7 +30,7 @@ class DocumentParser:
             logger.error(f"Failed to parse document at {file_path}: {e}")
             return None
 
-    def parse_documents_in_directory(self, directory_path: Union[str, Path] = SOURCE_DATA_DIR_PATH) -> List[DoclingDocument]:
+    def parse_documents_in_directory(self, directory_path: Union[str, Path]) -> List[DoclingDocument]:
         """
         Locates and parses all PDF documents in a given directory.
         """
@@ -47,7 +45,7 @@ class DocumentParser:
             documents.append(document)
         return documents
 
-    @staticmethod
+    @staticmethod  # TODO move to utils.py
     def print_items_from_document(document: DoclingDocument):
         """
         Utility function to print all text and table items from a document.

@@ -2,21 +2,13 @@ import os
 import logging
 from openai import OpenAI
 
-from src.generation.prompts import SYSTEM_PROMPT
-from src.utils.config import TESTING_OPENAI_MODEL
-
 logger = logging.getLogger(__name__)
 
 
 class Generator:
-    def __init__(self, system_prompt: str = SYSTEM_PROMPT, model=TESTING_OPENAI_MODEL):
+    def __init__(self, api_key: str, model: str, system_prompt: str):
         logger.info("Initializing Generator with OpenAI API.")
-
-        try:
-            api_key = os.environ["OPENAI_API_KEY"]
-        except KeyError:
-            raise ValueError("OPENAI_API_KEY environment variable not set.")
-
+        api_key = api_key
         self.model = model
         self.system_prompt = system_prompt
         self.client = OpenAI(api_key=api_key)

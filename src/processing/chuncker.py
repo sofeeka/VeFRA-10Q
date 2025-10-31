@@ -1,10 +1,8 @@
 from typing import List, Optional
 
-from src.utils.config import DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
-
 
 class DocumentChunker:
-    def __init__(self, strategy: str = 'recursive', chunk_size: int = DEFAULT_CHUNK_SIZE, overlap: int = DEFAULT_CHUNK_OVERLAP, separators: Optional[List[str]] = None):
+    def __init__(self, strategy: str, chunk_size: int, overlap: int, separators: Optional[List[str]] = None):
         self.strategy = strategy
         self.chunk_size = chunk_size
         self.overlap = overlap

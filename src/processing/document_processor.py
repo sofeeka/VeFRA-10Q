@@ -1,14 +1,13 @@
 import re
 import logging
 from pathlib import Path
-from typing import Union, List, Tuple, Final
+from typing import List, Final
 from collections import defaultdict
 
-from docling.document_converter import DocumentConverter
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 
-from src.utils.config import SOURCE_DATA_DIR_PATH, TABLE_DIR_PATH
+from src.utils.config import TABLE_DIR_PATH
 
 logger = logging.getLogger(__name__)
 

@@ -8,6 +8,7 @@ from src.processing.document_processor import process_documents_for_chunking, pr
 from src.processing.chuncker import DocumentChunker
 from src.retrieval.database import QdrantDatabase, ChunkPayload
 
+from src.dependency import get_document_parser, get_document_chunker
 from src.utils.config import SOURCE_DATA_DIR_PATH
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 # TODO: remove duplication, refactor to reuse ingestion of single file
 def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase):
     # PDF -> Docling
-    parser = DocumentParser()
+    parser: DocumentParser = get_document_parser()
     parsed_docs: List[DoclingDocument] = parser.parse_documents_in_directory(
         directory_path=data_dir_path)
 
@@ -25,7 +26,7 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase
         documents=parsed_docs)
 
     # Processed Text -> Text Chunks
-    chunker = DocumentChunker()
+    chunker: DocumentChunker = get_document_chunker()
     chunks: List[str] = []
     for text in processed_texts:
         c = chunker.chunk_text(text)
@@ -46,7 +47,7 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase
 def ingest_single_document(file_path: str, db: QdrantDatabase) -> bool:
     try:
         # PDF -> Docling
-        parser = DocumentParser()
+        parser: DocumentParser = get_document_parser()
         parsed_doc: DoclingDocument = parser.parse_document(
             file_path=file_path)
 
@@ -64,7 +65,7 @@ def ingest_single_document(file_path: str, db: QdrantDatabase) -> bool:
             return False
 
         # Processed Text -> Text Chunks
-        chunker = DocumentChunker()
+        chunker: DocumentChunker = get_document_chunker()
         chunks: List[str] = chunker.chunk_text(processed_text)
 
         if not chunks:

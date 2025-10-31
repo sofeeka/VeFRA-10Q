@@ -3,9 +3,6 @@ from typing import List, Protocol
 
 from fastembed.embedding import DefaultEmbedding
 
-from src.utils.config import FAST_EMBED_DEFAULT_EMBEDDING_MODEL
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +22,7 @@ class EmbeddingModel(Protocol):
 class FastEmbedModel:
     """A concrete implementation of an embedding model using FastEmbed."""
 
-    def __init__(self, model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL):
+    def __init__(self, model_name: str):
         logger.info(f"Initializing FastEmbed model...")
         self.model = DefaultEmbedding(model_name=model_name)
 

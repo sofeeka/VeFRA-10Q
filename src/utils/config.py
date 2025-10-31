@@ -13,7 +13,7 @@ TABLE_DIR_PATH = Path(DATA_DIR_PATH, "tables")
 # chunking
 DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 100
-
+DEFAULT_CHUNKING_STRATEGY = "recursive"
 
 # embedding
 # DEFAULT_EMBEDDING_MODEL = "models/text-embedding-004" # google embedding
