@@ -62,5 +62,5 @@ async def create_upload_file(file: UploadFile = File(...)):
             logger.info(f"Cleaned up temp file: {temp_file_path}")
 
 if __name__ == "__main__":
-    # python src/api/app.py
+    # uvicorn src.api.app:app --reload
     uvicorn.run(app, host="0.0.0.0", port=8000)
