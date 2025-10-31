@@ -3,12 +3,13 @@ import logging
 from openai import OpenAI
 
 from src.generation.prompts import SYSTEM_PROMPT
+from src.utils.config import TESTING_OPENAI_MODEL
 
 logger = logging.getLogger(__name__)
 
 
 class Generator:
-    def __init__(self, system_prompt: str = SYSTEM_PROMPT):
+    def __init__(self, system_prompt: str = SYSTEM_PROMPT, model=TESTING_OPENAI_MODEL):
         logger.info("Initializing Generator with OpenAI API.")
 
         try:
@@ -16,6 +17,7 @@ class Generator:
         except KeyError:
             raise ValueError("OPENAI_API_KEY environment variable not set.")
 
+        self.model = model
         self.system_prompt = system_prompt
         self.client = OpenAI(api_key=api_key)
 
@@ -27,17 +29,15 @@ class Generator:
         logger.info(f"User prompt: {user_prompt}")
         logger.info(f"System prompt: {self.system_prompt}")
 
-        # TODO implement actual call to OpenAI API
-        # response = self.client.chat.completions.create(
-        #     model="gpt-4-turbo",  # TODO change to small models for testing
-        #     messages=[
-        #         {"role": "system", "content": self.system_prompt},
-        #         {"role": "user", "content": user_prompt},
-        #     ],
-        #     temperature=0.2,
-        # )
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
 
-        # return response.choices[0].message.content
-        return f"""Response generation stub:
-        User prompt: {user_prompt} \n ----------
-        System prompt: {self.system_prompt}"""
+        return response.choices[0].message.content
+        # return f"""Response generation stub:
+        # User prompt: {user_prompt} \n ----------
+        # System prompt: {self.system_prompt}"""
