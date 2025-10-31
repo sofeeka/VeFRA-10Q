@@ -34,7 +34,7 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase
     db.add_chunks(chunks=chunks)
 
 
-def ingest_single_document(file_path: str, db: QdrantDatabase):
+def ingest_single_document(file_path: str, db: QdrantDatabase) -> bool:
     try:
         # PDF -> Docling
         parser = DocumentParser()
@@ -64,8 +64,13 @@ def ingest_single_document(file_path: str, db: QdrantDatabase):
             return False
 
         # Text Chunks -> Database
-        # TODO add error handling and feedback about success/failure
-        db.add_chunks(chunks=chunks)
+        result = db.add_chunks(chunks=chunks)
+
+        if not result:
+            logger.error(
+                f"Failed to add chunks to database for document: {file_path}")
+            return False
+
         return True
 
     except Exception as e:

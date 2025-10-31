@@ -3,11 +3,14 @@ from pydantic import BaseModel, Field
 from typing import List, Any, Dict
 
 from qdrant_client import QdrantClient
+import qdrant_client.http.models as types
 from qdrant_client.http.models import PointStruct
 from qdrant_client.conversions.common_types import ScoredPoint
 
 from src.utils.config import DEFAULT_QDRANT_COLLECTION_NAME, DEFAULT_QDRANT_STORAGE_PATH, DEFAULT_QDRANT_DISTANCE_METRIC, DEFAULT_SEARCH_K
 from src.retrieval.embedder import EmbeddingModel
+
+logger = logging.getLogger(__name__)
 
 
 class ChunkPayload(BaseModel):
@@ -27,7 +30,7 @@ class QdrantDatabase:  # TODO think of a better way of setting default qdrant co
         logging.info(f"Creating Qdrant client at {path}...")
         self.client = QdrantClient(path=path)
 
-    def recreate_collection(self, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME, vector_params: Any = None):
+    def recreate_collection(self, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME, vector_params: Any = None) -> bool:
         """
         Recreate a Qdrant collection with specified vector parameters.
         """
@@ -39,21 +42,38 @@ class QdrantDatabase:  # TODO think of a better way of setting default qdrant co
                 "distance": DEFAULT_QDRANT_DISTANCE_METRIC
             }
 
-        self.client.recreate_collection(
+        result: bool = self.client.recreate_collection(
             collection_name=collection_name,
             vectors_config=vector_params
         )
 
-    def add_chunks(self, chunks: List[str], collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME):
+        return result
+
+    def add_chunks(self, chunks: List[str], collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME) -> bool:
         embeddings = self.embedding_model.embed(chunks)
         # TODO add better payload and unique ID
         points = [PointStruct(id=i, vector=embeddings[i], payload={
             "text": chunk}) for i, chunk in enumerate(chunks)]
 
-        self.client.upsert(
+        result: types.UpdateResult = self.client.upsert(
             collection_name=collection_name,
             points=points
         )
+
+        status = result.status
+
+        if status == types.UpdateStatus.COMPLETED:
+            logger.info(
+                f"Upsert successful (Operation ID: {result.operation_id})")
+            return True
+
+        elif status == types.UpdateStatus.ACKNOWLEDGED:
+            logger.warning(
+                f"Upsert acknowledged, but processing in background (Operation ID: {result.operation_id})")
+            return True
+        else:
+            logger.error(f"Upsert failed with status: {result.status}")
+            return False
 
     def get_search_results(self, query: str, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME, limit: int = DEFAULT_SEARCH_K) -> list[ScoredPoint]:
         query_vector = self.embedding_model.embed(query)[0]
@@ -70,7 +90,12 @@ class QdrantDatabase:  # TODO think of a better way of setting default qdrant co
     def get_related_chunks(self, query: str, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME, limit: int = DEFAULT_SEARCH_K) -> List[str]:
         results = self.get_search_results(
             query=query, collection_name=collection_name, limit=limit)
+
+        if not results:
+            return []
+
         chunks = [result.payload['text']
                   for result in results
                   if result.payload and 'text' in result.payload]
+
         return chunks
