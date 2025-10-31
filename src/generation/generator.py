@@ -1,65 +1,43 @@
 import os
+import logging
 from openai import OpenAI
 
-from src.retrieval.database import QdrantDatabase
-from .prompts import SYSTEM_PROMPT
+from src.generation.prompts import SYSTEM_PROMPT
+
+logger = logging.getLogger(__name__)
 
 
 class Generator:
-    def __init__(self, db: QdrantDatabase):
+    def __init__(self, system_prompt: str = SYSTEM_PROMPT):
+        logger.info("Initializing Generator with OpenAI API.")
+
         try:
             api_key = os.environ["OPENAI_API_KEY"]
         except KeyError:
             raise ValueError("OPENAI_API_KEY environment variable not set.")
 
-        if not db:
-            db = QdrantDatabase()
-
+        self.system_prompt = system_prompt
         self.client = OpenAI(api_key=api_key)
-        self.db = db
 
-    def generate_response(self, user_query: str) -> str:
+    def generate_response(self, user_prompt: str) -> str:
         """
         Generates a response to a user query using RAG.
         """
+        logger.info("Generating response using OpenAI API.")
+        logger.info(f"User prompt: {user_prompt}")
+        logger.info(f"System prompt: {self.system_prompt}")
 
-        context_chunks = self.db.search(user_query)
-        context_str = "\n---\n".join(context_chunks)
+        # TODO implement actual call to OpenAI API
+        # response = self.client.chat.completions.create(
+        #     model="gpt-4-turbo",  # TODO change to small models for testing
+        #     messages=[
+        #         {"role": "system", "content": self.system_prompt},
+        #         {"role": "user", "content": user_prompt},
+        #     ],
+        #     temperature=0.2,
+        # )
 
-        user_prompt = f"""
-        Context from 10-Q form:
-        ---
-        {context_str}
-        ---
-        Question: {user_query}
-        """
-
-        response = self.client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.2,
-        )
-
-        return response.choices[0].message.content
-
-
-if __name__ == '__main__':
-
-    try:
-        rag_generator = Generator(db=QdrantDatabase())
-
-        # 3. Define a user query and generate a response
-        query = "What are the company's cash and cash equivalents?"
-        answer = rag_generator.generate_response(query)
-
-        print("\n--- User Query ---")
-        print(query)
-        print("\n--- LLM Response ---")
-        print(answer)
-
-    except ValueError as e:
-        print(f"Error: {e}")
-        print("Please make sure you have set the OPENAI_API_KEY in your environment variables.")
+        # return response.choices[0].message.content
+        return f"""Response generation stub:
+        User prompt: {user_prompt} \n ----------
+        System prompt: {self.system_prompt}"""
