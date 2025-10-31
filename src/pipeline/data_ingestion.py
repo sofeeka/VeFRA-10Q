@@ -11,7 +11,7 @@ from src.retrieval.database import QdrantDatabase
 from src.utils.config import SOURCE_DATA_DIR_PATH
 
 
-def populate_database_with_docs_in_folder(data_dir_path: str):
+def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase):
     # PDF -> Docling
     parser = DocumentParser()
     parsed_docs: List[DoclingDocument] = parser.parse_documents_in_directory(
@@ -29,11 +29,7 @@ def populate_database_with_docs_in_folder(data_dir_path: str):
         chunks.extend(c)
 
     # Text Chunks -> Database
-    embedding_model = FastEmbedModel()
-    qdrant_db = QdrantDatabase(embedding_model=embedding_model)
-
-    qdrant_db.recreate_collection()
-    qdrant_db.add_chunks(chunks=chunks)
+    db.add_chunks(chunks=chunks)
 
 
 if __name__ == "__main__":
