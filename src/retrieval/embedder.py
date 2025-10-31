@@ -1,6 +1,5 @@
 import logging
-from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Protocol
 
 from fastembed.embedding import DefaultEmbedding
 
@@ -10,22 +9,27 @@ from src.utils.config import FAST_EMBED_DEFAULT_EMBEDDING_MODEL
 logger = logging.getLogger(__name__)
 
 
-class EmbeddingModel(ABC):
-    @abstractmethod
+class EmbeddingModel(Protocol):
+    """A protocol defining the interface for an embedding model."""
+
     def embed(self, chunks: List[str]) -> List[List[float]]:
-        pass
+        """Takes a list of text chunks and returns a list of embeddings."""
+        ...
 
     @property
-    @abstractmethod
     def dim(self) -> int:
-        pass
+        """Returns the dimension (size) of the embeddings."""
+        ...
 
 
-class FastEmbedModel(EmbeddingModel):
+class FastEmbedModel:
+    """A concrete implementation of an embedding model using FastEmbed."""
+
     def __init__(self, model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL):
         logger.info(f"Initializing FastEmbed model...")
         self.model = DefaultEmbedding(model_name=model_name)
 
+        # calculate dimension (needed for Qdrant)
         dummy_embedding = list(self.model.embed("test"))[0]
         self._dim = len(dummy_embedding)
         logger.info(

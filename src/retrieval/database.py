@@ -8,7 +8,7 @@ import qdrant_client.http.models as types
 from qdrant_client.http.models import PointStruct
 from qdrant_client.conversions.common_types import ScoredPoint
 
-from src.utils.config import DEFAULT_QDRANT_COLLECTION_NAME, DEFAULT_QDRANT_STORAGE_PATH, DEFAULT_QDRANT_DISTANCE_METRIC, DEFAULT_SEARCH_K
+from src.utils.config import DEFAULT_QDRANT_COLLECTION_NAME, DEFAULT_QDRANT_DISTANCE_METRIC, DEFAULT_SEARCH_K
 from src.retrieval.embedder import EmbeddingModel
 
 logger = logging.getLogger(__name__)
@@ -25,17 +25,17 @@ class ChunkPayload(BaseModel):
 
 class QdrantDatabase:
 
-    def __init__(self, embedding_model: EmbeddingModel = None, path: str = DEFAULT_QDRANT_STORAGE_PATH, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME):
+    def __init__(self, embedding_model: EmbeddingModel, client: QdrantClient, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME):
         logging.info("Initializing Qdrant Database...")
 
         if not embedding_model:
-            logging.info("Using default embedding model for the database.")
-            embedding_model = EmbeddingModel()
+            logging.error("No embedding model provided to QdrantDatabase.")
+
+        if not client:
+            logging.error("No Qdrant client provided to QdrantDatabase.")
 
         self.embedding_model = embedding_model
-
-        logging.info(f"Creating Qdrant client at {path}...")
-        self.client = QdrantClient(path=path)
+        self.client = client
         self.collection_name = collection_name
 
     def recreate_collection(self, vector_params: Any = None) -> bool:
