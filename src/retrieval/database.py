@@ -118,7 +118,7 @@ class QdrantDatabase:
         """
 
         results: list[ScoredPoint] = self.get_search_results(
-            query=query, collection_name=self.collection_name, limit=limit)
+            query=query, limit=limit)
 
         if not results:
             return []
