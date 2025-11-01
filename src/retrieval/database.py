@@ -54,7 +54,7 @@ class UserKnowledgeBase:
         Recreate a Qdrant collection with specified vector parameters.
         """
         logging.info(f"Recreating collection '{self.collection_name}'...")
-
+        # TODO: move to admin or setup script, make params obligatory
         if vector_params is None:
             vector_params = {
                 "size": self.embedding_model.dim,
@@ -73,8 +73,9 @@ class UserKnowledgeBase:
         Embed and add text chunks to the Qdrant collection.
         """
 
-        texts_to_embed = [chunk.text for chunk in chunks]
-        embeddings = self.embedding_model.embed(texts_to_embed)
+        texts_to_embed: List[str] = [chunk.text for chunk in chunks]
+        embeddings: List[List[float]] = self.embedding_model.embed(
+            texts_to_embed)
 
         if not embeddings or len(embeddings) != len(chunks):
             logger.error(
@@ -110,6 +111,7 @@ class UserKnowledgeBase:
             logger.warning(
                 f"Upsert acknowledged, but processing in background (Operation ID: {result.operation_id})")
             return True
+
         else:
             logger.error(f"Upsert failed with status: {result.status}")
             return False

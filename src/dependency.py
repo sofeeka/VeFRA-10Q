@@ -1,4 +1,5 @@
 import os
+import dotenv
 import logging
 from functools import lru_cache
 from qdrant_client import QdrantClient
@@ -12,6 +13,7 @@ from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import *
 
 logger = logging.getLogger(__name__)
+dotenv.load_dotenv()
 
 
 @lru_cache()
@@ -40,6 +42,7 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
 def get_generator() -> Generator:
     try:
         logger.info("Caching singleton of Generator...")
+        # TODO: Maybe move to api_key management system or config
         api_key = os.environ["OPENAI_API_KEY"]
         return Generator(api_key=api_key, model=TESTING_OPENAI_MODEL, system_prompt=SYSTEM_PROMPT)
     except KeyError:

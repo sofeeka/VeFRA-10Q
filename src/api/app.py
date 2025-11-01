@@ -31,7 +31,7 @@ async def create_upload_file(user_id: str, file: UploadFile = File(...)):
             status_code=400,
             detail="Invalid user_id format."
         )
-
+    user_id = user_id.lower()
     user_data_dir = USER_SOURCE_DATA_DIR_PATH / user_id
 
     filename = Path(file.filename).name

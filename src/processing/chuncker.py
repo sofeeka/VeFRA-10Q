@@ -2,7 +2,13 @@ from typing import List, Optional
 
 
 class DocumentChunker:
-    def __init__(self, strategy: str, chunk_size: int, overlap: int, separators: Optional[List[str]] = None):
+    def __init__(
+        self,
+        strategy: str,
+        chunk_size: int,
+        overlap: int,
+        separators: Optional[List[str]] = None
+    ):
         self.strategy = strategy
         self.chunk_size = chunk_size
         self.overlap = overlap

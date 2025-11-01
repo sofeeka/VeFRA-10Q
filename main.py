@@ -16,12 +16,12 @@ logging.basicConfig(
 )
 
 if __name__ == "__main__":
-    user_id = 'nvda'
+    user_id = 'msft'
     db = get_user_knowledge_base(user_id=user_id)
     # db.recreate_collection()  # TODO remove or change to create if absent
-    # populate_database_with_docs_in_folder(data_dir_path=SOURCE_DATA_DIR_PATH, db=db)
 
-    query = "What significant changes, if any, in accounting practices were reported by NVIDIA in its most recent 10-Q?"
+    # question about 2-page testing document
+    query = "What are the industry trends right now?"
     rag_generator = get_generator()
 
     answer = answer_query(query=query, db=db, generator=rag_generator)
