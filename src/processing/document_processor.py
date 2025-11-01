@@ -15,6 +15,8 @@ TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
     r"\[TABLE_REFERENCE:\s*([^\]]+)\]"
 )
 
+TABLE_DIR_PATH.mkdir(parents=True, exist_ok=True)
+
 
 @staticmethod
 def process_document_for_chunking(document: DoclingDocument) -> str:
