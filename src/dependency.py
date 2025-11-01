@@ -8,7 +8,7 @@ from src.generation.prompts import SYSTEM_PROMPT
 from src.processing.document_parser import DocumentParser
 from src.processing.chuncker import DocumentChunker
 from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
-from src.retrieval.database import QdrantDatabase
+from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import *
 
 logger = logging.getLoger(__name__)
@@ -16,26 +16,30 @@ logger = logging.getLoger(__name__)
 
 @lru_cache()
 def get_embedder() -> EmbeddingModel:
-    logger.info("Initialising embedding model...")
+    logger.info("Caching singleton of embedding model...")
     return FastEmbedModel(model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL)
 
 
 @lru_cache()
 def get_qdrant_client() -> QdrantClient:
-    logger.info("Initializing Qdrant Client...")
+    logger.info("Caching singleton of Qdrant Client...")
     return QdrantClient(path=DEFAULT_QDRANT_STORAGE_PATH)
 
 
 @lru_cache()
-def get_qdrant_database() -> QdrantDatabase:
-    logger.info("Initialising Qdrant Database...")
-    return QdrantDatabase(embedding_model=get_embedder(), client=get_qdrant_client())
+def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
+    logger.info("Caching singleton of Qdrant Database...")
+    return UserKnowledgeBase(
+        user_id=user_id,
+        embedding_model=get_embedder(),
+        client=get_qdrant_client()
+    )
 
 
 @lru_cache()
 def get_generator() -> Generator:
     try:
-        logger.info("Initialising Generator...")
+        logger.info("Caching singleton of Generator...")
         api_key = os.environ["OPENAI_API_KEY"]
         return Generator(api_key=api_key, model=TESTING_OPENAI_MODEL, system_prompt=SYSTEM_PROMPT)
     except KeyError:
@@ -44,11 +48,11 @@ def get_generator() -> Generator:
 
 @lru_cache()
 def get_document_parser() -> DocumentParser:
-    logger.info("Initialising Document Parser...")
+    logger.info("Caching singleton of Document Parser...")
     return DocumentParser()
 
 
 @lru_cache()
 def get_document_chunker() -> DocumentChunker:
-    logger.info("Initialising Document Chunker...")
+    logger.info("Caching singleton of Document Chunker...")
     return DocumentChunker(strategy=DEFAULT_CHUNKING_STRATEGY, chunk_size=DEFAULT_CHUNK_SIZE, overlap=DEFAULT_CHUNK_OVERLAP, )
