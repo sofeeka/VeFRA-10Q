@@ -5,7 +5,7 @@ from src.retrieval.database import UserKnowledgeBase
 from src.generation.generator import Generator
 from src.pipeline.data_ingestion import populate_database_with_docs_in_folder
 from src.pipeline.query_answering import answer_query
-from src.utils.config import SOURCE_DATA_DIR_PATH, TEST_DATA_DIR_PATH
+from src.utils.config import USER_SOURCE_DATA_DIR_PATH, TEST_DATA_DIR_PATH
 
 from src.dependency import get_user_knowledge_base, get_generator
 

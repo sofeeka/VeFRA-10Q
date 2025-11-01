@@ -8,7 +8,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from src.pipeline.data_ingestion import ingest_single_document
 from src.retrieval.database import UserKnowledgeBase
 from src.dependency import get_user_knowledge_base
-from src.utils.config import SOURCE_DATA_DIR_PATH
+from src.utils.config import USER_SOURCE_DATA_DIR_PATH
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ async def create_upload_file(user_id: str, file: UploadFile = File(...)):
             detail="Invalid user_id format."
         )
 
-    user_data_dir = SOURCE_DATA_DIR_PATH / user_id
+    user_data_dir = USER_SOURCE_DATA_DIR_PATH / user_id
 
     filename = Path(file.filename).name
     if not filename.endswith(".pdf"):
