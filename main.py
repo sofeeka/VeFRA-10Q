@@ -1,13 +1,13 @@
 import logging
 
 from src.retrieval.embedder import FastEmbedModel
-from src.retrieval.database import QdrantDatabase
+from src.retrieval.database import UserKnowledgeBase
 from src.generation.generator import Generator
 from src.pipeline.data_ingestion import populate_database_with_docs_in_folder
 from src.pipeline.query_answering import answer_query
 from src.utils.config import SOURCE_DATA_DIR_PATH, TEST_DATA_DIR_PATH
 
-from src.dependency import get_qdrant_database, get_generator
+from src.dependency import get_user_knowledge_base, get_generator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,8 +16,8 @@ logging.basicConfig(
 )
 
 if __name__ == "__main__":
-
-    db = get_qdrant_database()
+    user_id = 'nvda'
+    db = get_user_knowledge_base(user_id=user_id)
     # db.recreate_collection()  # TODO remove or change to create if absent
     # populate_database_with_docs_in_folder(data_dir_path=SOURCE_DATA_DIR_PATH, db=db)
 

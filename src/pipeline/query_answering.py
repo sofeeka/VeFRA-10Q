@@ -1,9 +1,9 @@
-from src.retrieval.database import QdrantDatabase
+from src.retrieval.database import UserKnowledgeBase
 from src.processing.document_processor import process_chunks_after_retrieval
 from src.generation.generator import Generator
 
 
-def answer_query(query: str, db: QdrantDatabase, generator: Generator) -> str:
+def answer_query(query: str, db: UserKnowledgeBase, generator: Generator) -> str:
     """
     Answers a user query based on the documents in the Qdrant database.
     """

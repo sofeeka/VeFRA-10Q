@@ -1,15 +1,14 @@
 import os
 import logging
-import tempfile
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException
 
 from src.pipeline.data_ingestion import ingest_single_document
-from src.retrieval.database import QdrantDatabase
-
-from src.dependency import get_qdrant_database
+from src.retrieval.database import UserKnowledgeBase
+from src.dependency import get_user_knowledge_base
+from src.utils.config import SOURCE_DATA_DIR_PATH
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,29 +19,65 @@ app = FastAPI(
 )
 
 
-@app.post("/uploadfile/")
-async def create_upload_file(file: UploadFile = File(...)):
+@app.post("/{user_id}/uploadfile/")
+async def create_upload_file(user_id: str, file: UploadFile = File(...)):
     """
     Accepts a single PDF file, saves it temporarily,
     and triggers the ingestion pipeline.
     """
 
-    # try to temporarily save the uploaded file, so it can be processed
+    if ".." in user_id or "/" in user_id or "\\" in user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid user_id format."
+        )
+
+    user_data_dir = SOURCE_DATA_DIR_PATH / user_id
+
+    filename = Path(file.filename).name
+    if not filename.endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type. Only .pdf files are accepted."
+        )
+
+    permanent_file_path = user_data_dir / filename
+
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-            uploaded_file = await file.read()
-            temp_file.write(uploaded_file)
-            temp_file_path = temp_file.name
+        user_data_dir.mkdir(parents=True, exist_ok=True)
+
+        if permanent_file_path.exists():
+            logger.warning(
+                f"File conflict: {permanent_file_path} already exists."
+            )
+            raise HTTPException(
+                status_code=409,  # 409 Conflict
+                detail=f"File with name '{filename}' already exists for this user. "
+                "Please rename the file or delete the existing one first."
+            )
+
+        try:
+            uploaded_file_content = await file.read()
+            with open(permanent_file_path, "wb") as f:
+                f.write(uploaded_file_content)
+        except IOError as e:
+            logger.error(
+                f"Failed to write file to {permanent_file_path}: {e}", exc_info=True
+            )
+            raise HTTPException(
+                status_code=500, detail=f"Failed to save file on server: {e}"
+            )
 
         logger.info(
-            f"Received file: {file.filename}. Saved to: {temp_file_path}")
+            f"Received file: {file.filename}. Saved to: {permanent_file_path}")
 
-        db: QdrantDatabase = get_qdrant_database()
-        success = ingest_single_document(file_path=temp_file_path, db=db)
+        db: UserKnowledgeBase = get_user_knowledge_base(user_id=user_id)
+        success = ingest_single_document(file_path=permanent_file_path, db=db)
 
         if success:
             return {
                 "filename": file.filename,
+                "saved_path": str(permanent_file_path),
                 "status": "Processing successful"
             }
         else:
@@ -51,17 +86,23 @@ async def create_upload_file(file: UploadFile = File(...)):
                 detail="File processing failed."
             )
 
+    except HTTPException as e:
+        # Re-raise HTTPExceptions directly
+        raise e
     except Exception as e:
         logger.error(
             f"Error handling upload for {file.filename}: {e}", exc_info=True)
+
+        if permanent_file_path and Path(permanent_file_path).exists():
+            try:
+                os.remove(permanent_file_path)
+                logger.info(f"Cleaned up failed upload: {permanent_file_path}")
+            except OSError as oe:
+                logger.error(
+                    f"Failed to clean up file {permanent_file_path}: {oe}")
+
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {e}")
-
-    finally:
-        # clean up the temporary file
-        if 'tmp_file_path' in locals() and Path(temp_file_path).exists():
-            os.remove(temp_file_path)
-            logger.info(f"Cleaned up temp file: {temp_file_path}")
 
 if __name__ == "__main__":
     # uvicorn src.api.app:app --reload

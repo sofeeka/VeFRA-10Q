@@ -11,7 +11,7 @@ from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import *
 
-logger = logging.getLoger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @lru_cache()

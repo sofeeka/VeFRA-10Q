@@ -6,7 +6,7 @@ from docling_core.types.doc import DoclingDocument
 from src.processing.document_parser import DocumentParser
 from src.processing.document_processor import process_documents_for_chunking, process_document_for_chunking
 from src.processing.chuncker import DocumentChunker
-from src.retrieval.database import QdrantDatabase, ChunkPayload
+from src.retrieval.database import UserKnowledgeBase, ChunkPayload
 
 from src.dependency import get_document_parser, get_document_chunker
 from src.utils.config import SOURCE_DATA_DIR_PATH
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: remove duplication, refactor to reuse ingestion of single file
-def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase):
+def populate_database_with_docs_in_folder(data_dir_path: str, db: UserKnowledgeBase):
     # PDF -> Docling
     parser: DocumentParser = get_document_parser()
     parsed_docs: List[DoclingDocument] = parser.parse_documents_in_directory(
@@ -44,7 +44,7 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: QdrantDatabase
     db.add_chunks(chunks=chunk_payloads)
 
 
-def ingest_single_document(file_path: str, db: QdrantDatabase) -> bool:
+def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
     try:
         # PDF -> Docling
         parser: DocumentParser = get_document_parser()

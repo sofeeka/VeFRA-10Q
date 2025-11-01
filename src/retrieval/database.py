@@ -23,19 +23,30 @@ class ChunkPayload(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
-class QdrantDatabase:
+class UserKnowledgeBase:
 
-    def __init__(self, embedding_model: EmbeddingModel, client: QdrantClient, collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME):
-        logging.info("Initializing Qdrant Database...")
+    def __init__(
+        self,
+        user_id: str,
+        client: QdrantClient,
+        embedding_model: EmbeddingModel,
+        collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME
+    ):
+        logging.info(f"Initializing Knowledge Base for user {user_id}...")
+
+        if not user_id:
+            logging.error("No user ID provided to User Knowledge Base.")
 
         if not embedding_model:
-            logging.error("No embedding model provided to QdrantDatabase.")
+            logging.error(
+                "No embedding model provided to User Knowledge Base.")
 
         if not client:
-            logging.error("No Qdrant client provided to QdrantDatabase.")
+            logging.error("No Qdrant client provided to User Knowledge Base.")
 
-        self.embedding_model = embedding_model
+        self.user_id = user_id
         self.client = client
+        self.embedding_model = embedding_model
         self.collection_name = collection_name
 
     def recreate_collection(self, vector_params: Any = None) -> bool:
