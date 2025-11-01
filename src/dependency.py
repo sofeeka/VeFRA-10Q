@@ -1,4 +1,5 @@
 import os
+import logging
 from functools import lru_cache
 from qdrant_client import QdrantClient
 
@@ -10,29 +11,31 @@ from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
 from src.retrieval.database import QdrantDatabase
 from src.utils.config import *
 
+logger = logging.getLoger(__name__)
+
 
 @lru_cache()
 def get_embedder() -> EmbeddingModel:
-    print("Loading embedding model...")
+    logger.info("Initialising embedding model...")
     return FastEmbedModel(model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL)
 
 
 @lru_cache()
 def get_qdrant_client() -> QdrantClient:
-    print("Initializing Qdrant Client...")
+    logger.info("Initializing Qdrant Client...")
     return QdrantClient(path=DEFAULT_QDRANT_STORAGE_PATH)
 
 
 @lru_cache()
 def get_qdrant_database() -> QdrantDatabase:
-    print("Initialising QdrantDatabase...")
+    logger.info("Initialising Qdrant Database...")
     return QdrantDatabase(embedding_model=get_embedder(), client=get_qdrant_client())
 
 
 @lru_cache()
 def get_generator() -> Generator:
     try:
-        print("Initialising Generator...")
+        logger.info("Initialising Generator...")
         api_key = os.environ["OPENAI_API_KEY"]
         return Generator(api_key=api_key, model=TESTING_OPENAI_MODEL, system_prompt=SYSTEM_PROMPT)
     except KeyError:
@@ -41,11 +44,11 @@ def get_generator() -> Generator:
 
 @lru_cache()
 def get_document_parser() -> DocumentParser:
-    print("Initialising Document Parser...")
+    logger.info("Initialising Document Parser...")
     return DocumentParser()
 
 
 @lru_cache()
 def get_document_chunker() -> DocumentChunker:
-    print("Initialising Document Chunker...")
+    logger.info("Initialising Document Chunker...")
     return DocumentChunker(strategy=DEFAULT_CHUNKING_STRATEGY, chunk_size=DEFAULT_CHUNK_SIZE, overlap=DEFAULT_CHUNK_OVERLAP, )
