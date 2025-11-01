@@ -5,9 +5,10 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException
 
+from src.pipeline.query_answering import answer_query
 from src.pipeline.data_ingestion import ingest_single_document
 from src.retrieval.database import UserKnowledgeBase
-from src.dependency import get_user_knowledge_base
+from src.dependency import get_user_knowledge_base, get_generator
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
 
 logging.basicConfig(level=logging.INFO)
@@ -103,6 +104,29 @@ async def create_upload_file(user_id: str, file: UploadFile = File(...)):
 
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {e}")
+
+
+@app.post("/{user_id}/generate/")
+async def generate(user_id: str, query: str):
+    if ".." in user_id or "/" in user_id or "\\" in user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid user_id format."
+        )
+
+    db = get_user_knowledge_base(user_id=user_id)
+    rag_generator = get_generator()
+    answer = ''
+    try:
+        answer = answer_query(query=query, db=db, generator=rag_generator)
+        return {
+            "answer": answer,
+            "status": "Success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error. {e}")
+
 
 if __name__ == "__main__":
     # uvicorn src.api.app:app --reload
