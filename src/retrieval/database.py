@@ -66,6 +66,19 @@ class UserKnowledgeBase:
             vectors_config=vector_params
         )
 
+        try:
+            self.client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name="user_id",
+                field_schema=types.PayloadSchemaType.KEYWORD,
+                wait=True
+            )
+            logging.info(
+                f"Created payload index on 'user_id' for collection '{self.collection_name}'")
+        except Exception as e:
+            logger.error(f"Failed to create payload index: {e}")
+            return False
+
         return result
 
     def add_chunks(self, chunks: List[ChunkPayload]) -> bool:
@@ -82,13 +95,17 @@ class UserKnowledgeBase:
                 "Embedding failed or returned mismatched number of embeddings.")
             return False
 
-        points = [
-            PointStruct(
+        points: List[PointStruct] = []
+        for i, chunk in enumerate(chunks):
+            payload = chunk.model_dump()
+
+            payload['user_id'] = self.user_id
+            point = PointStruct(
                 id=chunk.id,
                 vector=embeddings[i],
-                payload=chunk.model_dump()
-            ) for i, chunk in enumerate(chunks)
-        ]
+                payload=payload
+            )
+            points.append(point)
 
         if not points:
             logger.error(
@@ -123,9 +140,19 @@ class UserKnowledgeBase:
 
         query_vector: List[float] = self.embedding_model.embed(query)[0]
 
+        user_filter = types.Filter(
+            must=[
+                types.FieldCondition(
+                    key="user_id",
+                    match=types.MatchValue(value=self.user_id)
+                )
+            ]
+        )
+
         search_results: List[types.ScoredPoint] = self.client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
+            query_filter=user_filter,
             limit=limit,
             with_payload=True
         )
