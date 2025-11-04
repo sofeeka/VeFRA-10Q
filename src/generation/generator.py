@@ -30,7 +30,7 @@ class Generator:
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            text_format=ResponseModel
+            text_format=ResponseModel,
         )
 
         return response.output_parsed.response

@@ -1,13 +1,13 @@
 import os
-from loguru import logger
 from pathlib import Path
 
-from fastapi import UploadFile, HTTPException
+from fastapi import HTTPException, UploadFile
 from fastapi.responses import JSONResponse
+from loguru import logger
 
+from src.dependency import get_user_knowledge_base
 from src.pipeline.data_ingestion import ingest_single_document
 from src.retrieval.database import UserKnowledgeBase
-from src.dependency import get_user_knowledge_base
 
 
 async def save_uploaded_document(file: UploadFile, permanent_file_path: Path):
@@ -32,9 +32,11 @@ async def save_uploaded_document(file: UploadFile, permanent_file_path: Path):
     logger.info(f"Saved file to: {permanent_file_path}")
 
 
-async def process_document_ingestion(file: UploadFile, user_id: str, permanent_file_path: Path) -> JSONResponse:
+async def process_document_ingestion(
+    file: UploadFile, user_id: str, permanent_file_path: Path
+) -> JSONResponse:
     """
-    Processes the API request after the input as been validated. 
+    Processes the API request after the input as been validated.
     Saves the uploaded document, and triggers the ingestion pipeline.
     """
 
@@ -48,13 +50,10 @@ async def process_document_ingestion(file: UploadFile, user_id: str, permanent_f
             content={
                 "filename": file.filename,
             },
-            status_code=200
+            status_code=200,
         )
     else:
-        raise HTTPException(
-            status_code=500,
-            detail="File processing failed."
-        )
+        raise HTTPException(status_code=500, detail="File processing failed.")
 
 
 def cleanup_document(file_path: str):
@@ -67,5 +66,4 @@ def cleanup_document(file_path: str):
             os.remove(file_path)
             logger.info(f"Cleaned up failed upload: {file_path}")
         except OSError as oe:
-            logger.error(
-                f"Failed to clean up file {file_path}: {oe}")
+            logger.error(f"Failed to clean up file {file_path}: {oe}")

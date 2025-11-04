@@ -1,19 +1,18 @@
 import asyncio
-import uvicorn
-from loguru import logger
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
 
+import uvicorn
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
+from loguru import logger
+
+from api.service import cleanup_document, process_document_ingestion
 from src.api.models import FileUploadModel
+from src.dependency import get_generator, get_user_knowledge_base
 from src.pipeline.query_answering import answer_query
-from api.service import process_document_ingestion, cleanup_document
-from src.dependency import get_user_knowledge_base, get_generator
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
 
-
 app = FastAPI(
-    title="VeFRA PDF Document Ingestion API",
-    description="API to accept PDF documents."
+    title="VeFRA PDF Document Ingestion API", description="API to accept PDF documents."
 )
 
 
@@ -31,8 +30,7 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
         raise e
     except Exception as e:
         logger.error(f"Unexpected error during validation: {e}")
-        raise HTTPException(
-            status_code=500, detail="An internal error occurred.")
+        raise HTTPException(status_code=500, detail="An internal error occurred.")
 
     # TODO move to path manager or something similar
     user_data_dir = USER_SOURCE_DATA_DIR_PATH / model.user_id
@@ -40,15 +38,17 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
 
     try:
         response: JSONResponse = await process_document_ingestion(
-            file=model.file, user_id=model.user_id, permanent_file_path=permanent_file_path)
+            file=model.file,
+            user_id=model.user_id,
+            permanent_file_path=permanent_file_path,
+        )
         return response
     except HTTPException as e:
         raise e
     except Exception as e:
         logger.error(f"Error handling upload for {model.file.filename}: {e}")
         cleanup_document(permanent_file_path)
-        raise HTTPException(
-            status_code=500, detail=f"Internal server error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 
 @app.post("/{user_id}/generate/")
@@ -58,30 +58,23 @@ async def generate(user_id: str, query: str):
     """
 
     if ".." in user_id or "/" in user_id or "\\" in user_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid user_id format."
-        )
+        raise HTTPException(status_code=400, detail="Invalid user_id format.")
 
     db = get_user_knowledge_base(user_id=user_id)
     rag_generator = get_generator()
-    answer = ''
+    answer = ""
     try:
         answer = await asyncio.to_thread(
-            answer_query,
-            query=query,
-            db=db,
-            generator=rag_generator
+            answer_query, query=query, db=db, generator=rag_generator
         )
         return JSONResponse(
             content={
                 "answer": answer,
             },
-            status_code=200
+            status_code=200,
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Internal server error. {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error. {e}")
 
 
 if __name__ == "__main__":

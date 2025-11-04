@@ -1,10 +1,10 @@
-from loguru import logger
 from pathlib import Path
-from typing import Union, List
+from typing import List, Union
 
-from docling.document_converter import DocumentConverter
 from docling.datamodel.document import TableItem, TextItem
+from docling.document_converter import DocumentConverter
 from docling_core.types.doc import DoclingDocument
+from loguru import logger
 
 
 class DocumentParser:
@@ -29,7 +29,9 @@ class DocumentParser:
             logger.error(f"Failed to parse document at {file_path}: {e}")
             raise e
 
-    def parse_documents_in_directory(self, directory_path: Union[str, Path]) -> List[DoclingDocument]:
+    def parse_documents_in_directory(
+        self, directory_path: Union[str, Path]
+    ) -> List[DoclingDocument]:
         """
         Locates and parses all PDF documents in a given directory.
         """

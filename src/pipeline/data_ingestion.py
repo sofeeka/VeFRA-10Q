@@ -1,14 +1,16 @@
 from typing import List
-from loguru import logger
 
 from docling_core.types.doc import DoclingDocument
+from loguru import logger
 
-from src.processing.document_parser import DocumentParser
-from src.processing.document_processor import process_documents_for_chunking, process_document_for_chunking
+from src.dependency import get_document_chunker, get_document_parser
 from src.processing.chuncker import DocumentChunker
-from src.retrieval.database import UserKnowledgeBase, ChunkPayload
-
-from src.dependency import get_document_parser, get_document_chunker
+from src.processing.document_parser import DocumentParser
+from src.processing.document_processor import (
+    process_document_for_chunking,
+    process_documents_for_chunking,
+)
+from src.retrieval.database import ChunkPayload, UserKnowledgeBase
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
 
 
@@ -17,11 +19,11 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: UserKnowledgeB
     # PDF -> Docling
     parser: DocumentParser = get_document_parser()
     parsed_docs: List[DoclingDocument] = parser.parse_documents_in_directory(
-        directory_path=data_dir_path)
+        directory_path=data_dir_path
+    )
 
     # Docling -> Processed Text
-    processed_texts: List[str] = process_documents_for_chunking(
-        documents=parsed_docs)
+    processed_texts: List[str] = process_documents_for_chunking(documents=parsed_docs)
 
     # Processed Text -> Text Chunks
     chunker: DocumentChunker = get_document_chunker()
@@ -34,8 +36,9 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: UserKnowledgeB
     chunk_payloads: List[ChunkPayload] = [
         ChunkPayload(
             text=chunk,
-            metadata={}  # TODO: add metadata
-        ) for chunk in chunks
+            metadata={},  # TODO: add metadata
+        )
+        for chunk in chunks
     ]
 
     # ChunkPayloads -> Database
@@ -45,27 +48,24 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: UserKnowledgeB
 # TODO improve error handling. raise errors instead of simply returning False
 def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
     """
-    Runs the full ingestion pipeline. Reads a PDF file with Docling, processes it 
+    Runs the full ingestion pipeline. Reads a PDF file with Docling, processes it
     and saves to user's knowledge base
     """
 
     try:
         # PDF -> Docling
         parser: DocumentParser = get_document_parser()
-        parsed_doc: DoclingDocument = parser.parse_document(
-            file_path=file_path)
+        parsed_doc: DoclingDocument = parser.parse_document(file_path=file_path)
 
         if not parsed_doc:
             logger.error(f"Failed to parse document: {file_path}")
             return False
 
         # Docling -> Processed Text
-        processed_text: str = process_document_for_chunking(
-            document=parsed_doc)
+        processed_text: str = process_document_for_chunking(document=parsed_doc)
 
         if not processed_text:
-            logger.error(
-                f"Parsed, but failed to process document: {file_path}")
+            logger.error(f"Parsed, but failed to process document: {file_path}")
             return False
 
         # Processed Text -> Text Chunks
@@ -74,33 +74,34 @@ def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
 
         if not chunks:
             logger.error(
-                f"Parsed, processed, but failed to chunk document: {file_path}")
+                f"Parsed, processed, but failed to chunk document: {file_path}"
+            )
             return False
 
         # Text Chunks -> ChunkPayloads
         chunk_payloads: List[ChunkPayload] = [
             ChunkPayload(
                 text=chunk,
-                metadata={}  # TODO: add metadata
-            ) for chunk in chunks
+                metadata={},  # TODO: add metadata
+            )
+            for chunk in chunks
         ]
 
         # ChunkPayloads -> Database
         result: bool = db.add_chunks(chunks=chunk_payloads)
 
         if not result:
-            logger.error(
-                f"Failed to add chunks to database for document: {file_path}")
+            logger.error(f"Failed to add chunks to database for document: {file_path}")
             return False
 
         return True
 
     except Exception as e:
         logger.error(
-            f"Unexpected error happened when ingesting document {file_path}: {e}")
+            f"Unexpected error happened when ingesting document {file_path}: {e}"
+        )
         return False
 
 
 if __name__ == "__main__":
-    populate_database_with_docs_in_folder(
-        data_dir_path=USER_SOURCE_DATA_DIR_PATH)
+    populate_database_with_docs_in_folder(data_dir_path=USER_SOURCE_DATA_DIR_PATH)

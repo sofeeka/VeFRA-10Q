@@ -1,11 +1,11 @@
 import re
-from loguru import logger
-from pathlib import Path
-from typing import List, Final
 from collections import defaultdict
+from pathlib import Path
+from typing import Final, List
 
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
+from loguru import logger
 
 from src.utils.config import TABLE_DIR_PATH
 
@@ -53,20 +53,20 @@ def process_chunks_after_retrieval(chunks: List[str]) -> List[str]:
     """
     logger.info(f"Processing {len(chunks)} retrieved chunks...")
 
-    processed_chunks = [process_chunk_after_retrieval(
-        chunk) for chunk in chunks]
+    processed_chunks = [process_chunk_after_retrieval(chunk) for chunk in chunks]
     return processed_chunks
 
 
-def _extract_tables_from_document(document: DoclingDocument, table_dir: Path = TABLE_DIR_PATH) -> str:
+def _extract_tables_from_document(
+    document: DoclingDocument, table_dir: Path = TABLE_DIR_PATH
+) -> str:
     """
     Extracts and processes all table items from a document.
     Saves tables as markdown and replaces them with a reference string.
     """
     logger.info(f"Processing tables in document {document.name}...")
 
-    base_file_name = Path(document.name).stem.replace(
-        " ", "_").replace(".", "_")
+    base_file_name = Path(document.name).stem.replace(" ", "_").replace(".", "_")
 
     page_table_counts = defaultdict(int)
 
@@ -77,7 +77,6 @@ def _extract_tables_from_document(document: DoclingDocument, table_dir: Path = T
             processed_items.append(item.text.strip())
 
         elif isinstance(item, TableItem):
-
             page_numbers = sorted(
                 set(prov.page_no for prov in item.prov if hasattr(prov, "page_no"))
             )
@@ -87,14 +86,13 @@ def _extract_tables_from_document(document: DoclingDocument, table_dir: Path = T
                 page_num = page_numbers[0]
             else:
                 logger.warning(
-                    f"Could not find page number for a table in {document.name}. Defaulting to -1.")
+                    f"Could not find page number for a table in {document.name}. Defaulting to -1."
+                )
 
             table_num_on_page = page_table_counts[page_num]
             page_table_counts[page_num] += 1
 
-            table_id = (
-                f"Table_{base_file_name}_p{page_num}_n{table_num_on_page}"
-            )
+            table_id = f"Table_{base_file_name}_p{page_num}_n{table_num_on_page}"
 
             try:
                 table_md = item.export_to_markdown(doc=document)
@@ -145,9 +143,6 @@ def _insert_tables_into_chunk(chunk_text: str, table_dir: Path = TABLE_DIR_PATH)
             logger.error(f"Error reading table file {table_filepath}: {e}")
             return f"\n\n[TABLE_READ_ERROR: {table_id}]\n\n"
 
-    reconstructed_text = TABLE_REFERENCE_PATTERN.sub(
-        _load_table_content,
-        chunk_text
-    )
+    reconstructed_text = TABLE_REFERENCE_PATTERN.sub(_load_table_content, chunk_text)
 
     return reconstructed_text

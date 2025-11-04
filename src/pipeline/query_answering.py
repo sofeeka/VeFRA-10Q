@@ -1,6 +1,6 @@
-from src.retrieval.database import UserKnowledgeBase
-from src.processing.document_processor import process_chunks_after_retrieval
 from src.generation.generator import Generator
+from src.processing.document_processor import process_chunks_after_retrieval
+from src.retrieval.database import UserKnowledgeBase
 
 
 def answer_query(query: str, db: UserKnowledgeBase, generator: Generator) -> str:
