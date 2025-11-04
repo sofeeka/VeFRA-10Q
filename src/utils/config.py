@@ -5,6 +5,7 @@ PROJECT_ROOT_PATH = Path(__file__).resolve().parent.parent.parent
 # data
 DATA_DIR_PATH = Path(PROJECT_ROOT_PATH, "data")
 
+# TODO refactor, because this looks like path to folder of specific user, and it is not
 USER_SOURCE_DATA_DIR_PATH = Path(DATA_DIR_PATH, "user_sources")
 TEST_DATA_DIR_PATH = Path(DATA_DIR_PATH, "testing")
 TABLE_DIR_PATH = Path(DATA_DIR_PATH, "tables")

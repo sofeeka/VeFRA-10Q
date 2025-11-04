@@ -44,6 +44,7 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: UserKnowledgeB
     db.add_chunks(chunks=chunk_payloads)
 
 
+# TODO improve error handling. raise errors instead of simply returning False
 def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
     try:
         # PDF -> Docling
