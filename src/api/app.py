@@ -4,6 +4,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
 
 from src.pipeline.query_answering import answer_query
 from src.pipeline.data_ingestion import ingest_single_document
@@ -76,11 +77,14 @@ async def create_upload_file(user_id: str, file: UploadFile = File(...)):
         success = ingest_single_document(file_path=permanent_file_path, db=db)
 
         if success:
-            return {
-                "filename": file.filename,
-                "saved_path": str(permanent_file_path),
-                "status": "Processing successful"
-            }
+            return JSONResponse(
+                content={
+                    "filename": file.filename,
+                    # does this expose the structure inside of the server?
+                    "saved_path": str(permanent_file_path)
+                },
+                status_code=200
+            )
         else:
             raise HTTPException(
                 status_code=500,
@@ -119,10 +123,12 @@ async def generate(user_id: str, query: str):
     answer = ''
     try:
         answer = answer_query(query=query, db=db, generator=rag_generator)
-        return {
-            "answer": answer,
-            "status": "Success"
-        }
+        return JSONResponse(
+            content={
+                "answer": answer,
+            },
+            status_code=200
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Internal server error. {e}")
