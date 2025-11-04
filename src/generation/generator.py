@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 class Generator:
     def __init__(self, api_key: str, model: str, system_prompt: str):
         logger.info("Initializing Generator with OpenAI API.")
-        api_key = api_key
+        self.api_key = api_key
         self.model = model
         self.system_prompt = system_prompt
         self.client = OpenAI(api_key=api_key)

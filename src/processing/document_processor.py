@@ -18,7 +18,6 @@ TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
 TABLE_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
 
-@staticmethod
 def process_document_for_chunking(document: DoclingDocument) -> str:
     """
     Processes a single document to extract text and extract tables preparing it for chunking.
@@ -29,7 +28,6 @@ def process_document_for_chunking(document: DoclingDocument) -> str:
     return processed_doc
 
 
-@staticmethod
 def process_documents_for_chunking(documents: List[DoclingDocument]) -> List[str]:
     """
     Processes documents to extract text and extract tables preparing them for chunking.
@@ -40,7 +38,6 @@ def process_documents_for_chunking(documents: List[DoclingDocument]) -> List[str
     return processed_docs
 
 
-@staticmethod
 def process_chunk_after_retrieval(chunk: str) -> str:
     """
     Processes a retrieved text chunk to insert tables back into the text.
@@ -52,7 +49,6 @@ def process_chunk_after_retrieval(chunk: str) -> str:
     return processed_chunk
 
 
-@staticmethod
 def process_chunks_after_retrieval(chunks: List[str]) -> List[str]:
     """
     Processes retrieved text chunks to insert tables back into the text.
@@ -64,7 +60,6 @@ def process_chunks_after_retrieval(chunks: List[str]) -> List[str]:
     return processed_chunks
 
 
-@staticmethod
 def _extract_tables_from_document(document: DoclingDocument, table_dir: Path = TABLE_DIR_PATH) -> str:
     """
     Extracts and processes all table items from a document.
@@ -124,7 +119,6 @@ def _extract_tables_from_document(document: DoclingDocument, table_dir: Path = T
     return "\n\n".join(processed_items)
 
 
-@staticmethod
 def _insert_tables_into_chunk(chunk_text: str, table_dir: Path = TABLE_DIR_PATH) -> str:
     """
     Reconstructs a text chunk by replacing all table references

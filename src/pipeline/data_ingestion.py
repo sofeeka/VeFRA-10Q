@@ -92,7 +92,7 @@ def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
         return True
 
     except Exception as e:
-        print(
+        logger.error(
             f"Unexpected error happened when ingesting document {file_path}: {e}")
         return False
 

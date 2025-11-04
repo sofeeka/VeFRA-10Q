@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 class DocumentParser:
     def __init__(self, converter: DocumentConverter = None):
         if converter is None:
-            self.converter = DocumentConverter()
+            converter = DocumentConverter()
+        self.converter = converter
 
     def parse_document(self, file_path: Union[str, Path]) -> DoclingDocument:
         """
@@ -28,7 +29,7 @@ class DocumentParser:
             return document
         except Exception as e:
             logger.error(f"Failed to parse document at {file_path}: {e}")
-            return None
+            raise e
 
     def parse_documents_in_directory(self, directory_path: Union[str, Path]) -> List[DoclingDocument]:
         """
@@ -40,9 +41,15 @@ class DocumentParser:
             directory_path = Path(directory_path)
 
         documents: List[DoclingDocument] = []
+
         for file_path in directory_path.glob("*.pdf"):
             document: DoclingDocument = self.parse_document(file_path)
+
+            if document is None:
+                logger.error(f"Could not parse document at {file_path}")
+
             documents.append(document)
+
         return documents
 
     @staticmethod  # TODO move to utils.py
