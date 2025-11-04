@@ -1,5 +1,5 @@
-import logging
 from typing import List
+from loguru import logger
 
 from docling_core.types.doc import DoclingDocument
 
@@ -10,8 +10,6 @@ from src.retrieval.database import UserKnowledgeBase, ChunkPayload
 
 from src.dependency import get_document_parser, get_document_chunker
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
-
-logger = logging.getLogger(__name__)
 
 
 # TODO: remove duplication, refactor to reuse ingestion of single file

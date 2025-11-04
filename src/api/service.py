@@ -1,5 +1,5 @@
 import os
-import logging
+from loguru import logger
 from pathlib import Path
 
 from fastapi import UploadFile, HTTPException
@@ -8,9 +8,6 @@ from fastapi.responses import JSONResponse
 from src.pipeline.data_ingestion import ingest_single_document
 from src.retrieval.database import UserKnowledgeBase
 from src.dependency import get_user_knowledge_base
-
-
-logger = logging.getLogger(__name__)
 
 
 async def save_uploaded_document(file: UploadFile, permanent_file_path: Path):

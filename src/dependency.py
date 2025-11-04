@@ -1,6 +1,6 @@
 import os
 import dotenv
-import logging
+from loguru import logger
 from functools import lru_cache
 from qdrant_client import QdrantClient
 
@@ -12,7 +12,6 @@ from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import *
 
-logger = logging.getLogger(__name__)
 dotenv.load_dotenv()
 
 

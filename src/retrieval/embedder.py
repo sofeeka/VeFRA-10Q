@@ -1,9 +1,7 @@
-import logging
+from loguru import logger
 from typing import List, Protocol
 
 from fastembed.embedding import DefaultEmbedding
-
-logger = logging.getLogger(__name__)
 
 
 class EmbeddingModel(Protocol):

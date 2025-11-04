@@ -1,12 +1,10 @@
-import logging
+from loguru import logger
 from pathlib import Path
 from typing import Union, List
 
 from docling.document_converter import DocumentConverter
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
-
-logger = logging.getLogger(__name__)
 
 
 class DocumentParser:

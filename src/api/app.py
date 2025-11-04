@@ -1,6 +1,5 @@
-import logging
-
 import uvicorn
+from loguru import logger
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -10,8 +9,6 @@ from api.service import process_document_ingestion, cleanup_document
 from src.dependency import get_user_knowledge_base, get_generator
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="VeFRA PDF Document Ingestion API",

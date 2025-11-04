@@ -1,20 +1,12 @@
 import os
-import logging
+from loguru import logger
 
-from src.retrieval.embedder import FastEmbedModel
 from src.retrieval.database import UserKnowledgeBase
-from src.generation.generator import Generator
-from src.pipeline.data_ingestion import populate_database_with_docs_in_folder
 from src.pipeline.query_answering import answer_query
 from src.utils.config import DEFAULT_QDRANT_COLLECTION_NAME, DEFAULT_QDRANT_STORAGE_PATH
 
 from src.dependency import get_user_knowledge_base, get_generator
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 if __name__ == "__main__":
     user_id = 'msft'

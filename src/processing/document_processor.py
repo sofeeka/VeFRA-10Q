@@ -1,5 +1,5 @@
 import re
-import logging
+from loguru import logger
 from pathlib import Path
 from typing import List, Final
 from collections import defaultdict
@@ -8,8 +8,6 @@ from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 
 from src.utils.config import TABLE_DIR_PATH
-
-logger = logging.getLogger(__name__)
 
 TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
     r"\[TABLE_REFERENCE:\s*([^\]]+)\]"

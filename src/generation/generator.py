@@ -1,7 +1,5 @@
-import logging
+from loguru import logger
 from openai import OpenAI
-
-logger = logging.getLogger(__name__)
 
 
 class Generator:

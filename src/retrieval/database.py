@@ -1,5 +1,5 @@
 import uuid
-import logging
+from loguru import logger
 from pydantic import BaseModel, Field
 from typing import List, Any, Dict
 
@@ -10,8 +10,6 @@ from qdrant_client.conversions.common_types import ScoredPoint
 
 from src.utils.config import DEFAULT_QDRANT_COLLECTION_NAME, DEFAULT_QDRANT_DISTANCE_METRIC, DEFAULT_SEARCH_K
 from src.retrieval.embedder import EmbeddingModel
-
-logger = logging.getLogger(__name__)
 
 
 class ChunkPayload(BaseModel):
@@ -32,17 +30,17 @@ class UserKnowledgeBase:
         embedding_model: EmbeddingModel,
         collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME
     ):
-        logging.info(f"Initializing Knowledge Base for user {user_id}...")
+        logger.info(f"Initializing Knowledge Base for user {user_id}...")
 
         if not user_id:
-            logging.error("No user ID provided to User Knowledge Base.")
+            logger.error("No user ID provided to User Knowledge Base.")
 
         if not embedding_model:
-            logging.error(
+            logger.error(
                 "No embedding model provided to User Knowledge Base.")
 
         if not client:
-            logging.error("No Qdrant client provided to User Knowledge Base.")
+            logger.error("No Qdrant client provided to User Knowledge Base.")
 
         self.user_id = user_id
         self.client = client
@@ -53,7 +51,7 @@ class UserKnowledgeBase:
         """
         Recreate a Qdrant collection with specified vector parameters.
         """
-        logging.info(f"Recreating collection '{self.collection_name}'...")
+        logger.info(f"Recreating collection '{self.collection_name}'...")
         # TODO: move to admin or setup script, make params obligatory
         if vector_params is None:
             vector_params = {
@@ -73,7 +71,7 @@ class UserKnowledgeBase:
                 field_schema=types.PayloadSchemaType.KEYWORD,
                 wait=True
             )
-            logging.info(
+            logger.info(
                 f"Created payload index on 'user_id' for collection '{self.collection_name}'")
         except Exception as e:
             logger.error(f"Failed to create payload index: {e}")
