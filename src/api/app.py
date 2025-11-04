@@ -53,6 +53,10 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
 
 @app.post("/{user_id}/generate/")
 async def generate(user_id: str, query: str):
+    """
+    Generates the response to user question using user's knowledge base.
+    """
+
     if ".." in user_id or "/" in user_id or "\\" in user_id:
         raise HTTPException(
             status_code=400,

@@ -44,6 +44,11 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: UserKnowledgeB
 
 # TODO improve error handling. raise errors instead of simply returning False
 def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
+    """
+    Runs the full ingestion pipeline. Reads a PDF file with Docling, processes it 
+    and saves to user's knowledge base
+    """
+
     try:
         # PDF -> Docling
         parser: DocumentParser = get_document_parser()
