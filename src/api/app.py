@@ -1,3 +1,4 @@
+import asyncio
 import uvicorn
 from loguru import logger
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -62,7 +63,12 @@ async def generate(user_id: str, query: str):
     rag_generator = get_generator()
     answer = ''
     try:
-        answer = answer_query(query=query, db=db, generator=rag_generator)
+        answer = await asyncio.to_thread(
+            answer_query,
+            query=query,
+            db=db,
+            generator=rag_generator
+        )
         return JSONResponse(
             content={
                 "answer": answer,

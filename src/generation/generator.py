@@ -1,5 +1,11 @@
 from loguru import logger
 from openai import OpenAI
+from openai.types.responses.parsed_response import ParsedResponse
+from pydantic import BaseModel
+
+
+class ResponseModel(BaseModel):
+    response: str
 
 
 class Generator:
@@ -18,15 +24,17 @@ class Generator:
         logger.info(f"User prompt: {user_prompt}")
         logger.info(f"System prompt: {self.system_prompt}")
 
-        response = self.client.chat.completions.create(
+        response: ParsedResponse = self.client.responses.parse(
             model=self.model,
-            messages=[
+            input=[
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
+            text_format=ResponseModel
         )
 
-        return response.choices[0].message.content
+        return response.output_parsed.response
+
         # return f"""Response generation stub:
         # User prompt: {user_prompt} \n ----------
         # System prompt: {self.system_prompt}"""
