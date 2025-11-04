@@ -45,6 +45,7 @@ class DocumentParser:
 
             if document is None:
                 logger.error(f"Could not parse document at {file_path}")
+                continue
 
             documents.append(document)
 
