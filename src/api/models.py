@@ -1,9 +1,7 @@
-import logging
+from loguru import logger
 from fastapi import UploadFile, HTTPException
 from pydantic import BaseModel, field_validator, model_validator
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
-
-logger = logging.getLogger(__name__)
 
 
 class FileUploadModel(BaseModel):
