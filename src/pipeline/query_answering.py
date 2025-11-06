@@ -5,6 +5,7 @@ from src.processing.document_processor import process_chunks_after_retrieval
 from src.retrieval.database import UserKnowledgeBase
 
 
+# TODO maybe create a class
 def answer_query(
     query: str, db: UserKnowledgeBase, generator: Generator
 ) -> Tuple[str, List[str]]:
