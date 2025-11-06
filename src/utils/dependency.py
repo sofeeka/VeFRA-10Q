@@ -45,9 +45,9 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
 def get_generator() -> Generator:
     logger.info("Caching singleton of Generator...")
     return Generator(
-        api_key=get_openai_api_key(),
         model=TESTING_OPENAI_MODEL,
         system_prompt=SYSTEM_PROMPT,
+        client=get_openai_client(),
     )
 
 
