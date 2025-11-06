@@ -5,11 +5,11 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from api.service import cleanup_document, process_document_ingestion
 from src.api.models import FileUploadModel
-from src.dependency import get_generator, get_user_knowledge_base
+from src.api.service import cleanup_document, process_document_ingestion
 from src.pipeline.query_answering import answer_query
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
+from src.utils.dependency import get_generator, get_user_knowledge_base
 
 app = FastAPI(
     title="VeFRA PDF Document Ingestion API", description="API to accept PDF documents."

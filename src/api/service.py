@@ -5,9 +5,9 @@ from fastapi import HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from src.dependency import get_user_knowledge_base
 from src.pipeline.data_ingestion import ingest_single_document
 from src.retrieval.database import UserKnowledgeBase
+from src.utils.dependency import get_user_knowledge_base
 
 
 async def save_uploaded_document(file: UploadFile, permanent_file_path: Path):

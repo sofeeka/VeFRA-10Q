@@ -3,7 +3,6 @@ from typing import List
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.dependency import get_document_chunker, get_document_parser
 from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.processing.document_processor import (
@@ -12,6 +11,7 @@ from src.processing.document_processor import (
 )
 from src.retrieval.database import ChunkPayload, UserKnowledgeBase
 from src.utils.config import USER_SOURCE_DATA_DIR_PATH
+from src.utils.dependency import get_document_chunker, get_document_parser
 
 
 # TODO: remove duplication, refactor to reuse ingestion of single file
