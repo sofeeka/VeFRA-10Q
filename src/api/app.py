@@ -1,10 +1,12 @@
 import asyncio
 
+import pandas as pd
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
 
+from evaluation.rag_evaluator import run_evaluation
 from src.api.models import FileUploadModel
 from src.api.service import cleanup_document, process_document_ingestion
 from src.pipeline.query_answering import answer_query
@@ -70,6 +72,32 @@ async def generate(user_id: str, query: str):
         return JSONResponse(
             content={
                 "answer": answer,
+            },
+            status_code=200,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error. {e}")
+
+
+@app.get("/evaluate/")
+async def evaluate():
+    """
+    Runs the evaluation of the RAG system.
+    """
+    try:
+        df: pd.DataFrame = run_evaluation()
+        ranking = round(df["Ranking for Question with Contexts"].mean(), 2)
+
+        n_correct = df["Correctness"].value_counts()["CORRECT"]
+        n_total = df.shape[0]
+        correctness = round(n_correct / n_total, 2)
+
+        return JSONResponse(
+            content={
+                "mean_ranking": ranking,
+                "correctness": correctness,
+                "n_correct": int(n_correct),
+                "n": int(n_total),
             },
             status_code=200,
         )
