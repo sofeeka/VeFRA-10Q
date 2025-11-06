@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from loguru import logger
+from openai import OpenAI
 from qdrant_client import QdrantClient
 
 from src.generation.generator import Generator
@@ -42,15 +43,18 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
 
 @lru_cache()
 def get_generator() -> Generator:
-    try:
-        logger.info("Caching singleton of Generator...")
-        return Generator(
-            api_key=get_openai_api_key(),
-            model=TESTING_OPENAI_MODEL,
-            system_prompt=SYSTEM_PROMPT,
-        )
-    except KeyError:
-        raise ValueError("OPENAI_API_KEY environment variable not set.")
+    logger.info("Caching singleton of Generator...")
+    return Generator(
+        api_key=get_openai_api_key(),
+        model=TESTING_OPENAI_MODEL,
+        system_prompt=SYSTEM_PROMPT,
+    )
+
+
+@lru_cache()
+def get_openai_client() -> OpenAI:
+    logger.info("Caching singleton of OpenAI Client...")
+    return OpenAI(api_key=get_openai_api_key())
 
 
 @lru_cache()
