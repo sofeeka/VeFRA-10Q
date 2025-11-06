@@ -14,7 +14,9 @@ class Generator:
         self.api_key = api_key
         self.model = model
         self.system_prompt = system_prompt
-        self.client = OpenAI(api_key=api_key)
+        self.client = OpenAI(
+            api_key=api_key
+        )  # TODO inject client with api_key, not api_key itself
 
     def generate_response(self, user_prompt: str) -> str:
         """
