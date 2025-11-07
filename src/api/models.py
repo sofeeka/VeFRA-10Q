@@ -1,5 +1,6 @@
 import re
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 from fastapi import HTTPException, UploadFile
 from loguru import logger
@@ -13,6 +14,7 @@ class FileUploadModel(BaseModel):
     file: UploadFile
     user_id: str
 
+    filepath: Optional[Union[Path, str]]
     parsed_year: Optional[str] = None
     parsed_quarter: Optional[str] = None
     parsed_company: Optional[str] = None
@@ -122,4 +124,5 @@ class FileUploadModel(BaseModel):
                 "Please rename the file or delete the existing one first.",
             )
 
+        self.filepath = permanent_file_path
         return self

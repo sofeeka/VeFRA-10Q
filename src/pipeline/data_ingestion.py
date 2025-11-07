@@ -3,6 +3,7 @@ from typing import List
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
+from src.api.models import FileUploadModel
 from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.processing.document_processor import (
@@ -46,26 +47,27 @@ def populate_database_with_docs_in_folder(data_dir_path: str, db: UserKnowledgeB
 
 
 # TODO improve error handling. raise errors instead of simply returning False
-def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
+def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase) -> bool:
     """
     Runs the full ingestion pipeline. Reads a PDF file with Docling, processes it
     and saves to user's knowledge base
     """
-
+    # TODO refactor filepath and file_path difference in naming
+    filepath = model.filepath
     try:
         # PDF -> Docling
         parser: DocumentParser = get_document_parser()
-        parsed_doc: DoclingDocument = parser.parse_document(file_path=file_path)
+        parsed_doc: DoclingDocument = parser.parse_document(file_path=filepath)
 
         if not parsed_doc:
-            logger.error(f"Failed to parse document: {file_path}")
+            logger.error(f"Failed to parse document: {filepath}")
             return False
 
         # Docling -> Processed Text
         processed_text: str = process_document_for_chunking(document=parsed_doc)
 
         if not processed_text:
-            logger.error(f"Parsed, but failed to process document: {file_path}")
+            logger.error(f"Parsed, but failed to process document: {filepath}")
             return False
 
         # Processed Text -> Text Chunks
@@ -73,16 +75,18 @@ def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
         chunks: List[str] = chunker.chunk_text(processed_text)
 
         if not chunks:
-            logger.error(
-                f"Parsed, processed, but failed to chunk document: {file_path}"
-            )
+            logger.error(f"Parsed, processed, but failed to chunk document: {filepath}")
             return False
 
         # Text Chunks -> ChunkPayloads
         chunk_payloads: List[ChunkPayload] = [
             ChunkPayload(
                 text=chunk,
-                metadata={},  # TODO: add metadata
+                metadata={
+                    "year": model.parsed_year,
+                    "quarter": model.parsed_quarter,
+                    "company": model.parsed_company,
+                },
             )
             for chunk in chunks
         ]
@@ -91,14 +95,14 @@ def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
         result: bool = db.add_chunks(chunks=chunk_payloads)
 
         if not result:
-            logger.error(f"Failed to add chunks to database for document: {file_path}")
+            logger.error(f"Failed to add chunks to database for document: {filepath}")
             return False
 
         return True
 
     except Exception as e:
         logger.error(
-            f"Unexpected error happened when ingesting document {file_path}: {e}"
+            f"Unexpected error happened when ingesting document {filepath}: {e}"
         )
         return False
 

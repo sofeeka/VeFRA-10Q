@@ -34,10 +34,7 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
         raise HTTPException(status_code=500, detail="An internal error occurred.")
 
     try:
-        response: JSONResponse = await process_document_ingestion(
-            user_id=model.user_id,
-            file=model.file,
-        )
+        response: JSONResponse = await process_document_ingestion(model=model)
         return response
     except HTTPException as e:
         raise e
