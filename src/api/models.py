@@ -14,7 +14,7 @@ class FileUploadModel(BaseModel):
     file: UploadFile
     user_id: str
 
-    filepath: Optional[Union[Path, str]]
+    filepath: Optional[Union[Path, str]] = None
     parsed_year: Optional[str] = None
     parsed_quarter: Optional[str] = None
     parsed_company: Optional[str] = None
