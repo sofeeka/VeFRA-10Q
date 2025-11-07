@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import List, Tuple
 
@@ -11,14 +12,20 @@ from src.utils.config import TESTING_OPENAI_MODEL
 from src.utils.dependency import get_generator, get_user_knowledge_base
 
 os.api_key = openai_api_key = get_openai_api_key()
-test_link = "https://docs.google.com/spreadsheets/d/1p2yTtVr-xZSpJy9Ypxgx3RL3rq_Ggb7jsZBy81QOk0E/export?format=csv&gid=0"
+small_table_link = "https://docs.google.com/spreadsheets/d/1p2yTtVr-xZSpJy9Ypxgx3RL3rq_Ggb7jsZBy81QOk0E/export?format=csv&gid=0"
+full_table_link = "https://docs.google.com/spreadsheets/d/1CdunoCRKYYMcVc78v8DTfhPZYdkNqRPQRlCJfPN12Fg/export?format=csv&gid=0"
 
 
 def run_evaluation() -> pd.DataFrame:
     db = get_user_knowledge_base(user_id="msft")
     generator = get_generator()
 
-    full_df = pd.read_csv(test_link)
+    full_df = pd.read_csv(full_table_link)
+    full_df.drop(
+        columns=["Context"], inplace=True
+    )  # TODO change when context is added to all chunks
+    full_df = full_df.dropna()
+    eval_df = full_df.reset_index(drop=True)
 
     questions = full_df["Question"]
 
@@ -57,4 +64,9 @@ def run_evaluation() -> pd.DataFrame:
     )
 
     result_df = context_based_evals.as_dataframe()
+
+    now = datetime.datetime.now()
+    timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+    result_df.to_csv(f"evals_{timestamp}.csv")
+
     return result_df
