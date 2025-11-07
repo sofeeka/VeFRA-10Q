@@ -19,19 +19,19 @@ async def save_uploaded_document(model: FileUploadModel):
     try:
         uploaded_file_content = await model.file.read()
 
-        with open(model.file_path, "wb") as f:
+        with open(model.filepath, "wb") as f:
             f.write(uploaded_file_content)
 
     except IOError as e:
         logger.error(
-            f"Failed to write file {model.file.filename} to {model.file_path}: {e}",
+            f"Failed to write file {model.file.filename} to {model.filepath}: {e}",
             exc_info=True,
         )
         raise HTTPException(
             status_code=500, detail=f"Failed to save file on server: {e}"
         )
 
-    logger.info(f"Saved file to: {model.file_path}")
+    logger.info(f"Saved file to: {model.filepath}")
 
 
 async def process_document_ingestion(model: FileUploadModel) -> JSONResponse:
@@ -54,7 +54,7 @@ async def process_document_ingestion(model: FileUploadModel) -> JSONResponse:
                 status_code=200,
             )
         else:
-            _cleanup_document(file_path=model.filepath)
+            _cleanup_document(filepath=model.filepath)
             raise HTTPException(status_code=500, detail="File processing failed.")
     except HTTPException as e:
         raise e
@@ -63,14 +63,14 @@ async def process_document_ingestion(model: FileUploadModel) -> JSONResponse:
         raise HTTPException(status_code=500, detail="Unexpected error occured: {e}")
 
 
-def _cleanup_document(file_path: str):
+def _cleanup_document(filepath: str):
     """
     Delete the document. Used when saved the document, but failed the ingestion.
     """
 
-    if file_path and Path(file_path).exists():
+    if filepath and Path(filepath).exists():
         try:
-            os.remove(file_path)
-            logger.info(f"Cleaned up failed upload: {file_path}")
+            os.remove(filepath)
+            logger.info(f"Cleaned up failed upload: {filepath}")
         except OSError as oe:
-            logger.error(f"Failed to clean up file {file_path}: {oe}")
+            logger.error(f"Failed to clean up file {filepath}: {oe}")

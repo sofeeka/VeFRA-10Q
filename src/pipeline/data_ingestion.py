@@ -52,12 +52,12 @@ def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase) -> boo
     Runs the full ingestion pipeline. Reads a PDF file with Docling, processes it
     and saves to user's knowledge base
     """
-    # TODO refactor filepath and file_path difference in naming
+
     filepath = model.filepath
     try:
         # PDF -> Docling
         parser: DocumentParser = get_document_parser()
-        parsed_doc: DoclingDocument = parser.parse_document(file_path=filepath)
+        parsed_doc: DoclingDocument = parser.parse_document(filepath=filepath)
 
         if not parsed_doc:
             logger.error(f"Failed to parse document: {filepath}")

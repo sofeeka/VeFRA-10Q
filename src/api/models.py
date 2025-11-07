@@ -6,7 +6,7 @@ from fastapi import HTTPException, UploadFile
 from loguru import logger
 from pydantic import BaseModel, field_validator, model_validator
 
-from src.utils.config import get_user_sources_file_path
+from src.utils.config import get_user_sources_filepath
 
 
 # TODO improve error handling, maybe use loguru for catching raising exceptions
@@ -111,18 +111,18 @@ class FileUploadModel(BaseModel):
         self.parsed_quarter = quarter
         self.parsed_company = company
 
-        permanent_file_path = get_user_sources_file_path(
+        permanent_filepath = get_user_sources_filepath(
             user_id=self.user_id, filename=filename
         )
 
         # file conflict validation
-        if permanent_file_path.exists():
-            logger.warning(f"File conflict: {permanent_file_path} already exists.")
+        if permanent_filepath.exists():
+            logger.warning(f"File conflict: {permanent_filepath} already exists.")
             raise HTTPException(
                 status_code=409,  # 409 Conflict
                 detail=f"File '{self.file.filename}' already exists. "
                 "Please rename the file or delete the existing one first.",
             )
 
-        self.filepath = permanent_file_path
+        self.filepath = permanent_filepath
         return self

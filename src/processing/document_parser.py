@@ -13,20 +13,20 @@ class DocumentParser:
             converter = DocumentConverter()
         self.converter = converter
 
-    def parse_document(self, file_path: Union[str, Path]) -> DoclingDocument:
+    def parse_document(self, filepath: Union[str, Path]) -> DoclingDocument:
         """
         Parses a single document from a given full file path.
         """
-        logger.info(f"Parsing document at: {file_path}...")
+        logger.info(f"Parsing document at: {filepath}...")
 
         try:
-            result = self.converter.convert(file_path)
+            result = self.converter.convert(filepath)
             document = result.document
             if not document.name:
-                document.name = Path(file_path).name
+                document.name = Path(filepath).name
             return document
         except Exception as e:
-            logger.error(f"Failed to parse document at {file_path}: {e}")
+            logger.error(f"Failed to parse document at {filepath}: {e}")
             raise e
 
     def parse_documents_in_directory(
@@ -42,11 +42,11 @@ class DocumentParser:
 
         documents: List[DoclingDocument] = []
 
-        for file_path in directory_path.glob("*.pdf"):
-            document: DoclingDocument = self.parse_document(file_path)
+        for filepath in directory_path.glob("*.pdf"):
+            document: DoclingDocument = self.parse_document(filepath)
 
             if document is None:
-                logger.error(f"Could not parse document at {file_path}")
+                logger.error(f"Could not parse document at {filepath}")
                 continue
 
             documents.append(document)

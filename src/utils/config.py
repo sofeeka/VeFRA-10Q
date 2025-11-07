@@ -15,7 +15,7 @@ def get_user_sources_folder(user_id: str) -> Path:
     return user_data_dir
 
 
-def get_user_sources_file_path(user_id: str, filename: str) -> Path:
+def get_user_sources_filepath(user_id: str, filename: str) -> Path:
     return get_user_sources_folder(user_id=user_id) / filename
 
 
