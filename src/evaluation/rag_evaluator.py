@@ -59,7 +59,14 @@ def run_evaluation() -> pd.DataFrame:
                 provider="openai",
                 model=TESTING_OPENAI_MODEL,
             ),
-            ContextRelevance(input="Question", contexts="Contexts"),
+            ContextRelevance(
+                "Question",
+                "Context",
+                output_scores=True,
+                method="llm",
+                method_params={"model": TESTING_OPENAI_MODEL, "provider": "openai"},
+                aggregation_method="hit",
+            ),
         ],
     )
 
