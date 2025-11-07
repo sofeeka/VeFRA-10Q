@@ -30,5 +30,5 @@ def answer_query(
     Question: {query}
     """
 
-    response: str = generator.generate_response(user_prompt=user_prompt)
+    response: str = generator.generate_response(prompt=user_prompt)
     return response, rebuilt_chunks

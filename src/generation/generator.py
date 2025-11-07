@@ -9,27 +9,36 @@ class ResponseModel(BaseModel):
 
 
 class Generator:
-    def __init__(self, model: str, system_prompt: str, client: OpenAI):
+    def __init__(
+        self,
+        model: str,
+        system_prompt: str,
+        client: OpenAI,
+    ):
         logger.info("Initializing Generator with OpenAI API.")
         self.model = model
         self.system_prompt = system_prompt
         self.client = client
 
-    def generate_response(self, user_prompt: str) -> str:
+    def generate_response(
+        self,
+        prompt: str,
+        text_format: BaseModel = ResponseModel,
+    ) -> str:
         """
         Generates a response to a user query using RAG.
         """
         logger.info("Generating response using OpenAI API.")
-        logger.info(f"User prompt: {user_prompt}")
+        logger.info(f"User prompt: {prompt}")
         logger.info(f"System prompt: {self.system_prompt}")
 
         response: ParsedResponse = self.client.responses.parse(
             model=self.model,
             input=[
                 {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": user_prompt},
+                {"role": "user", "content": prompt},
             ],
-            text_format=ResponseModel,
+            text_format=text_format,
         )
 
         return response.output_parsed.response
