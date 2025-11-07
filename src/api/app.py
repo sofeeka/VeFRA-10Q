@@ -8,9 +8,8 @@ from loguru import logger
 
 from evaluation.rag_evaluator import run_evaluation
 from src.api.models import FileUploadModel
-from src.api.service import cleanup_document, process_document_ingestion
+from src.api.service import process_document_ingestion
 from src.pipeline.query_answering import answer_query
-from src.utils.config import USER_SOURCE_DATA_DIR_PATH
 from src.utils.dependency import get_generator, get_user_knowledge_base
 
 app = FastAPI(
@@ -34,22 +33,16 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
         logger.error(f"Unexpected error during validation: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred.")
 
-    # TODO move to path manager or something similar
-    user_data_dir = USER_SOURCE_DATA_DIR_PATH / model.user_id
-    permanent_file_path = user_data_dir / model.file.filename
-
     try:
         response: JSONResponse = await process_document_ingestion(
-            file=model.file,
             user_id=model.user_id,
-            permanent_file_path=permanent_file_path,
+            file=model.file,
         )
         return response
     except HTTPException as e:
         raise e
     except Exception as e:
         logger.error(f"Error handling upload for {model.file.filename}: {e}")
-        cleanup_document(permanent_file_path)
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 

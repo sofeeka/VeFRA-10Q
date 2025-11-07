@@ -10,7 +10,7 @@ from src.processing.document_processor import (
     process_documents_for_chunking,
 )
 from src.retrieval.database import ChunkPayload, UserKnowledgeBase
-from src.utils.config import USER_SOURCE_DATA_DIR_PATH
+from src.utils.config import USERS_SOURCES_ROOT_FOLDER
 from src.utils.dependency import get_document_chunker, get_document_parser
 
 
@@ -104,4 +104,4 @@ def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
 
 
 if __name__ == "__main__":
-    populate_database_with_docs_in_folder(data_dir_path=USER_SOURCE_DATA_DIR_PATH)
+    populate_database_with_docs_in_folder(data_dir_path=USERS_SOURCES_ROOT_FOLDER)
