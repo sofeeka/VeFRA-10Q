@@ -16,8 +16,8 @@ small_table_link = "https://docs.google.com/spreadsheets/d/1p2yTtVr-xZSpJy9Ypxgx
 full_table_link = "https://docs.google.com/spreadsheets/d/1CdunoCRKYYMcVc78v8DTfhPZYdkNqRPQRlCJfPN12Fg/export?format=csv&gid=0"
 
 
-def run_evaluation() -> pd.DataFrame:
-    db = get_user_knowledge_base(user_id="msft")
+def run_evaluation(user_id: str) -> pd.DataFrame:
+    db = get_user_knowledge_base(user_id=user_id)
     generator = get_generator()
 
     full_df = pd.read_csv(full_table_link)
@@ -47,6 +47,8 @@ def run_evaluation() -> pd.DataFrame:
         }
     )
 
+    # TODO do something so that one incorrectly arsed response does not fail hte whole system. maybe evaluate
+    # rows one by one, or maybe there is a setting to retry or miss generated answers.
     context_based_evals = Dataset.from_pandas(
         eval_df,
         data_definition=DataDefinition(

@@ -48,7 +48,7 @@ async def generate(user_id: str, query: str):
     """
     Generates the response to user question using user's knowledge base.
     """
-
+    # TODO create better validation
     if ".." in user_id or "/" in user_id or "\\" in user_id:
         raise HTTPException(status_code=400, detail="Invalid user_id format.")
 
@@ -69,13 +69,15 @@ async def generate(user_id: str, query: str):
         raise HTTPException(status_code=500, detail=f"Internal server error. {e}")
 
 
-@app.get("/evaluate/")
-async def evaluate():
+@app.post("/{user_id}/evaluate/")
+async def evaluate(user_id: str):
     """
     Runs the evaluation of the RAG system.
     """
     try:
-        df: pd.DataFrame = run_evaluation()
+        df: pd.DataFrame = run_evaluation(
+            user_id=user_id
+        )  # TODO mention user_id in the benchmark dataset or create a testing user with all docs for this
         ranking = round(df["Ranking for Question with Contexts"].mean(), 2)
 
         n_correct = df["Correctness"].value_counts()["CORRECT"]
