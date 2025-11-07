@@ -4,6 +4,9 @@ You are an expert financial analyst specializing in SEC filings, particularly 10
 Answer the user questions based on the content of the 10-Q sections provided. If the information is not available in the text, respond with "Information not available in the provided text."
 """
 
+# TODO maybe ask it to generate complexity of the prompt, or make the documents key-value pairs like doc: # chunks from it,
+# but tell the LLM to keep in mind that retrieval is not perfect and 1 chunk is not enough for a fact.
+# Maybe introduce classification of a task as well: fact, comparison, etc.
 CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT = """\
 You are a helpful asistant in Form 10-Q analysis. You do not work with 10-K, you only have access to Q1, Q2, and Q3 reports from different years. You will be provided with a list of available documents in a form [YYYY QN COMPANY.pdf] e.g. [2023 Q3 MSFT.pdf]. The date right now is {current_date}. When refering to the last or most recent document know that we are talking about the latest AVAILABLE document.
 
