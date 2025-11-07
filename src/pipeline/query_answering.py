@@ -1,5 +1,7 @@
 from typing import List, Tuple
 
+from openai.types.responses.parsed_response import ParsedResponse
+
 from src.generation.generator import Generator
 from src.processing.document_processor import process_chunks_after_retrieval
 from src.retrieval.database import UserKnowledgeBase
@@ -30,5 +32,7 @@ def answer_query(
     Question: {query}
     """
 
-    response: str = generator.generate_response(prompt=user_prompt)
+    parsed_response: ParsedResponse = generator.generate_response(prompt=user_prompt)
+    response = parsed_response.output_parsed.response
+
     return response, rebuilt_chunks

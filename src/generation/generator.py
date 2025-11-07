@@ -24,7 +24,7 @@ class Generator:
         self,
         prompt: str,
         text_format: BaseModel = ResponseModel,
-    ) -> str:
+    ) -> ParsedResponse:
         """
         Generates a response to a user query using RAG.
         """
@@ -41,7 +41,7 @@ class Generator:
             text_format=text_format,
         )
 
-        return response.output_parsed.response
+        return response
 
         # return f"""Response generation stub:
         # User prompt: {user_prompt} \n ----------
