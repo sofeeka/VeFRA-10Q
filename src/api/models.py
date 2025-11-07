@@ -1,3 +1,6 @@
+import re
+from typing import Optional
+
 from fastapi import HTTPException, UploadFile
 from loguru import logger
 from pydantic import BaseModel, field_validator, model_validator
@@ -5,9 +8,14 @@ from pydantic import BaseModel, field_validator, model_validator
 from src.utils.config import get_user_sources_file_path
 
 
+# TODO improve error handling, maybe use loguru for catching raising exceptions
 class FileUploadModel(BaseModel):
     file: UploadFile
     user_id: str
+
+    parsed_year: Optional[str] = None
+    parsed_quarter: Optional[str] = None
+    parsed_company: Optional[str] = None
 
     @field_validator("user_id", mode="before")
     @classmethod
@@ -32,6 +40,8 @@ class FileUploadModel(BaseModel):
     def validate_file(cls, file: UploadFile):
         """
         Validates the uploaded file.
+        1. It must have a filename.
+        2. It must have a .pdf extension.
         """
 
         if not file:
@@ -41,7 +51,7 @@ class FileUploadModel(BaseModel):
         if not filename:
             raise HTTPException(status_code=400, detail="File has no filename.")
 
-        # filename extension validation
+        # file extension validation
         if not filename.lower().endswith(".pdf"):
             raise HTTPException(
                 status_code=400,
@@ -52,15 +62,55 @@ class FileUploadModel(BaseModel):
 
     @model_validator(mode="after")
     def check_for_file_conflict(self) -> "FileUploadModel":
+        # TODO maybe get rid of user id == company name check
         """
-        Validates if the file already exists at the destination path.
+        Validates the model as a whole after user_id and file were validated.
+
+        1. File must be unique (it cannot be present already)
+        2. The filename must be in format "YYY QN COMPANY.pdf"
+        3. Company matches user_id
+
+        If valid, extracts year, quarter and company from
         """
 
-        if not self.file or not self.user_id:
-            return self
+        filename = self.file.filename
+
+        # pattern match check
+        pattern = re.compile(r"^(\d{4}) (Q[1-4]) ([\w\s.-]+?)\.pdf$", re.IGNORECASE)
+        match = pattern.match(filename)
+
+        if not match:
+            logger.warning(
+                f"Invalid filename format for user {self.user_id}: {filename}"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid filename format. "
+                "Expected 'YYYY QN COMPANY.pdf' (e.g., '2022 Q1 MSFT.pdf').",
+            )
+
+        year = match.group(1)
+        quarter = match.group(2)
+        company = match.group(3).strip()
+
+        # TODO maybe get rid of this check
+        # company name matches user_id validator
+        if company.lower() != self.user_id:
+            logger.warning(
+                f"Filename company '{company}' does not match user_id '{self.user_id}'"
+            )
+            raise HTTPException(
+                status_code=400,  # 400 Bad Request is appropriate
+                detail=f"Company name in filename ('{company}') "
+                f"does not match your user ID.",
+            )
+
+        self.parsed_year = year
+        self.parsed_quarter = quarter
+        self.parsed_company = company
 
         permanent_file_path = get_user_sources_file_path(
-            user_id=self.user_id, filename=self.file.filename
+            user_id=self.user_id, filename=filename
         )
 
         # file conflict validation
