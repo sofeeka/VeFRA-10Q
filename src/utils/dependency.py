@@ -17,7 +17,6 @@ from src.utils.config import (
     DEFAULT_CHUNKING_STRATEGY,
     DEFAULT_QDRANT_STORAGE_PATH,
     FAST_EMBED_DEFAULT_EMBEDDING_MODEL,
-    TESTING_OPENAI_MODEL,
 )
 
 
@@ -42,10 +41,10 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
 
 
 @lru_cache()
-def get_generator() -> Generator:
+def get_generator(model: str) -> Generator:
     logger.info("Caching singleton of Generator...")
     return Generator(
-        model=TESTING_OPENAI_MODEL,
+        model=model,
         system_prompt=SYSTEM_PROMPT,
         client=get_openai_client(),
     )

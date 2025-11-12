@@ -4,7 +4,11 @@ from loguru import logger
 
 from src.pipeline.query_answering import answer_query
 from src.retrieval.database import UserKnowledgeBase
-from src.utils.config import DEFAULT_QDRANT_COLLECTION_NAME, DEFAULT_QDRANT_STORAGE_PATH
+from src.utils.config import (
+    DEFAULT_QDRANT_COLLECTION_NAME,
+    DEFAULT_QDRANT_STORAGE_PATH,
+    MAIN_RESPONSE_GENERATION_MODEL,
+)
 from src.utils.dependency import get_generator, get_user_knowledge_base
 
 if __name__ == "__main__":
@@ -21,7 +25,7 @@ if __name__ == "__main__":
         db.recreate_collection()
 
     query = "In Q1 2023, how did Microsoft's operating expenses measure up against its revenue?"
-    rag_generator = get_generator()
+    rag_generator = get_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
 
     answer = answer_query(query=query, db=db, generator=rag_generator)
     print(answer)

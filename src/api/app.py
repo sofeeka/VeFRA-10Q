@@ -10,6 +10,7 @@ from evaluation.rag_evaluator import run_evaluation
 from src.api.models import FileUploadModel
 from src.api.service import process_document_ingestion
 from src.pipeline.query_answering import answer_query
+from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL
 from src.utils.dependency import get_generator, get_user_knowledge_base
 
 app = FastAPI(
@@ -53,7 +54,7 @@ async def generate(user_id: str, query: str):
         raise HTTPException(status_code=400, detail="Invalid user_id format.")
 
     db = get_user_knowledge_base(user_id=user_id)
-    rag_generator = get_generator()
+    rag_generator = get_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
     answer = ""
     try:
         answer = await asyncio.to_thread(

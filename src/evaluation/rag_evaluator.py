@@ -8,7 +8,7 @@ from evidently.descriptors import ContextRelevance, CorrectnessLLMEval
 
 from src.pipeline.query_answering import answer_query
 from src.utils.api_key_manager import get_openai_api_key
-from src.utils.config import TESTING_OPENAI_MODEL
+from src.utils.config import EVALUATION_MODEL
 from src.utils.dependency import get_generator, get_user_knowledge_base
 
 os.api_key = openai_api_key = get_openai_api_key()
@@ -18,7 +18,7 @@ full_table_link = "https://docs.google.com/spreadsheets/d/1CdunoCRKYYMcVc78v8DTf
 
 def run_evaluation(user_id: str) -> pd.DataFrame:
     db = get_user_knowledge_base(user_id=user_id)
-    generator = get_generator()
+    generator = get_generator(model=EVALUATION_MODEL)
 
     full_df = pd.read_csv(full_table_link)
     full_df.drop(
@@ -59,14 +59,14 @@ def run_evaluation(user_id: str) -> pd.DataFrame:
                 column_name="Response",
                 target_output="Question",
                 provider="openai",
-                model=TESTING_OPENAI_MODEL,
+                model=EVALUATION_MODEL,
             ),
             ContextRelevance(
                 "Question",
                 "Context",
                 output_scores=True,
                 method="llm",
-                method_params={"model": TESTING_OPENAI_MODEL, "provider": "openai"},
+                method_params={"model": EVALUATION_MODEL, "provider": "openai"},
                 aggregation_method="hit",
             ),
         ],
