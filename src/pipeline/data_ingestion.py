@@ -85,7 +85,7 @@ def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase) -> boo
                 metadata={
                     "year": model.parsed_year,
                     "quarter": model.parsed_quarter,
-                    "company": model.parsed_company,
+                    "company": model.parsed_company,  # TODO redundant when user_id is present
                 },
             )
             for chunk in chunks
