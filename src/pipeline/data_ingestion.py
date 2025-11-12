@@ -3,7 +3,6 @@ from typing import List
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.dependency import get_document_chunker, get_document_parser
 from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.processing.document_processor import (
@@ -11,7 +10,8 @@ from src.processing.document_processor import (
     process_documents_for_chunking,
 )
 from src.retrieval.database import ChunkPayload, UserKnowledgeBase
-from src.utils.config import USER_SOURCE_DATA_DIR_PATH
+from src.utils.config import USERS_SOURCES_ROOT_FOLDER
+from src.utils.dependency import get_document_chunker, get_document_parser
 
 
 # TODO: remove duplication, refactor to reuse ingestion of single file
@@ -104,4 +104,4 @@ def ingest_single_document(file_path: str, db: UserKnowledgeBase) -> bool:
 
 
 if __name__ == "__main__":
-    populate_database_with_docs_in_folder(data_dir_path=USER_SOURCE_DATA_DIR_PATH)
+    populate_database_with_docs_in_folder(data_dir_path=USERS_SOURCES_ROOT_FOLDER)

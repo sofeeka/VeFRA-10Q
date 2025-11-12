@@ -2,7 +2,7 @@ from fastapi import HTTPException, UploadFile
 from loguru import logger
 from pydantic import BaseModel, field_validator, model_validator
 
-from src.utils.config import USER_SOURCE_DATA_DIR_PATH
+from src.utils.config import get_user_sources_file_path
 
 
 class FileUploadModel(BaseModel):
@@ -27,7 +27,7 @@ class FileUploadModel(BaseModel):
 
         return user_id.lower()
 
-    @field_validator("file")
+    @field_validator("file", mode="before")
     @classmethod
     def validate_file(cls, file: UploadFile):
         """
@@ -59,11 +59,9 @@ class FileUploadModel(BaseModel):
         if not self.file or not self.user_id:
             return self
 
-        # TODO move to a path manager or something similar,
-        # this path is hard coded in two places already
-        user_data_dir = USER_SOURCE_DATA_DIR_PATH / self.user_id
-        user_data_dir.mkdir(parents=True, exist_ok=True)
-        permanent_file_path = user_data_dir / self.file.filename
+        permanent_file_path = get_user_sources_file_path(
+            user_id=self.user_id, filename=self.file.filename
+        )
 
         # file conflict validation
         if permanent_file_path.exists():

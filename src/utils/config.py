@@ -4,11 +4,19 @@ PROJECT_ROOT_PATH = Path(__file__).resolve().parent.parent.parent
 
 # data
 DATA_DIR_PATH = Path(PROJECT_ROOT_PATH, "data")
-
-# TODO refactor, because this looks like path to folder of specific user, and it is not
-USER_SOURCE_DATA_DIR_PATH = Path(DATA_DIR_PATH, "user_sources")
-TEST_DATA_DIR_PATH = Path(DATA_DIR_PATH, "testing")
 TABLE_DIR_PATH = Path(DATA_DIR_PATH, "tables")
+
+USERS_SOURCES_ROOT_FOLDER = Path(DATA_DIR_PATH, "user_sources")
+
+
+def get_user_sources_folder(user_id: str) -> Path:
+    user_data_dir = USERS_SOURCES_ROOT_FOLDER / user_id
+    user_data_dir.mkdir(parents=True, exist_ok=True)
+    return user_data_dir
+
+
+def get_user_sources_file_path(user_id: str, filename: str) -> Path:
+    return get_user_sources_folder(user_id=user_id) / filename
 
 
 # chunking

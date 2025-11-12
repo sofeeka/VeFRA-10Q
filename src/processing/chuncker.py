@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 
+# TODO refactor remove class, make different chunking functions
 class DocumentChunker:
     def __init__(
         self,

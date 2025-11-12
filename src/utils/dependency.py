@@ -1,8 +1,7 @@
-import os
 from functools import lru_cache
 
-import dotenv
 from loguru import logger
+from openai import OpenAI
 from qdrant_client import QdrantClient
 
 from src.generation.generator import Generator
@@ -11,6 +10,7 @@ from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.retrieval.database import UserKnowledgeBase
 from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
+from src.utils.api_key_manager import get_openai_api_key
 from src.utils.config import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
@@ -19,8 +19,6 @@ from src.utils.config import (
     FAST_EMBED_DEFAULT_EMBEDDING_MODEL,
     TESTING_OPENAI_MODEL,
 )
-
-dotenv.load_dotenv()
 
 
 @lru_cache()
@@ -45,15 +43,18 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
 
 @lru_cache()
 def get_generator() -> Generator:
-    try:
-        logger.info("Caching singleton of Generator...")
-        # TODO: Maybe move to api_key management system or config
-        api_key = os.environ["OPENAI_API_KEY"]
-        return Generator(
-            api_key=api_key, model=TESTING_OPENAI_MODEL, system_prompt=SYSTEM_PROMPT
-        )
-    except KeyError:
-        raise ValueError("OPENAI_API_KEY environment variable not set.")
+    logger.info("Caching singleton of Generator...")
+    return Generator(
+        model=TESTING_OPENAI_MODEL,
+        system_prompt=SYSTEM_PROMPT,
+        client=get_openai_client(),
+    )
+
+
+@lru_cache()
+def get_openai_client() -> OpenAI:
+    logger.info("Caching singleton of OpenAI Client...")
+    return OpenAI(api_key=get_openai_api_key())
 
 
 @lru_cache()

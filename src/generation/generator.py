@@ -9,12 +9,11 @@ class ResponseModel(BaseModel):
 
 
 class Generator:
-    def __init__(self, api_key: str, model: str, system_prompt: str):
+    def __init__(self, model: str, system_prompt: str, client: OpenAI):
         logger.info("Initializing Generator with OpenAI API.")
-        self.api_key = api_key
         self.model = model
         self.system_prompt = system_prompt
-        self.client = OpenAI(api_key=api_key)
+        self.client = client
 
     def generate_response(self, user_prompt: str) -> str:
         """

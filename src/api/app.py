@@ -1,15 +1,16 @@
 import asyncio
 
+import pandas as pd
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from api.service import cleanup_document, process_document_ingestion
+from evaluation.rag_evaluator import run_evaluation
 from src.api.models import FileUploadModel
-from src.dependency import get_generator, get_user_knowledge_base
+from src.api.service import process_document_ingestion
 from src.pipeline.query_answering import answer_query
-from src.utils.config import USER_SOURCE_DATA_DIR_PATH
+from src.utils.dependency import get_generator, get_user_knowledge_base
 
 app = FastAPI(
     title="VeFRA PDF Document Ingestion API", description="API to accept PDF documents."
@@ -32,22 +33,16 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
         logger.error(f"Unexpected error during validation: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred.")
 
-    # TODO move to path manager or something similar
-    user_data_dir = USER_SOURCE_DATA_DIR_PATH / model.user_id
-    permanent_file_path = user_data_dir / model.file.filename
-
     try:
         response: JSONResponse = await process_document_ingestion(
-            file=model.file,
             user_id=model.user_id,
-            permanent_file_path=permanent_file_path,
+            file=model.file,
         )
         return response
     except HTTPException as e:
         raise e
     except Exception as e:
         logger.error(f"Error handling upload for {model.file.filename}: {e}")
-        cleanup_document(permanent_file_path)
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 
@@ -70,6 +65,32 @@ async def generate(user_id: str, query: str):
         return JSONResponse(
             content={
                 "answer": answer,
+            },
+            status_code=200,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error. {e}")
+
+
+@app.get("/evaluate/")
+async def evaluate():
+    """
+    Runs the evaluation of the RAG system.
+    """
+    try:
+        df: pd.DataFrame = run_evaluation()
+        ranking = round(df["Ranking for Question with Contexts"].mean(), 2)
+
+        n_correct = df["Correctness"].value_counts()["CORRECT"]
+        n_total = df.shape[0]
+        correctness = round(n_correct / n_total, 2)
+
+        return JSONResponse(
+            content={
+                "mean_ranking": ranking,
+                "correctness": correctness,
+                "n_correct": int(n_correct),
+                "n": int(n_total),
             },
             status_code=200,
         )
