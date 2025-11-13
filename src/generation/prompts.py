@@ -34,14 +34,23 @@ Your task is to analyze the user's question and generate a JSON plan.
     * **CRITICAL EXCEPTION:** A question for "three months ended September 30" or "9 months ended September 30" is a **Q3 question**. It is NOT a fallback. If you see this, proceed to Step 2.
 
 2.  **If, and ONLY if, it is NOT a failure, Analyze for Success:**
-    * **Specific Time:** If the question is about specific time frames (e.g., "Q2 2023", "first 6 months of 2022", "compare Q1 2023 and Q1 2022", "three months ended September 30, 2022").
+    * **Specific Time:** If the question is about *explicit* financial timeframes that map directly to 10-Q reports.
+        * **Examples:** "Q2 2023", "first 6 months of 2022", "compare Q1 2023 and Q1 2022", "three months ended September 30, 2022".
         * `status` is "success".
-        * `intent` is "specific_time".
+        * `intent` is "SPECIFIC_TIME".
         * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
         * **Mappings:** "first 6 months" -> Q2. "first 9 months" -> Q3. "3 months ended March 31" -> Q1. "3 months ended Sept 30" -> Q3.
-    * **General / Qualitative:** If the question is general, qualitative, or does not specify a time (e.g., "What are the risk factors?", "How is the company doing?", "What is the status of the deal the company was discussing in September?").
+
+    * **Latest:** If the question is qualitative and clearly implies a request for the *most recent* company status, with no other time period mentioned.
+        * **Examples:** "How is the company doing?", "What are the current risk factors?", "What is the company's outlook?".
         * `status` is "success".
-        * `intent` is "general_latest".
+        * `intent` is "LATEST_DOCUMENT".
+        * `needed_periods` MUST be `null`.
+
+    * **General Question:** If the question is qualitative and asks about a topic or event that could be in *any* document, not just the latest. This applies if the question is general or mentions a non-specific time (like a month).
+        * **Examples:** "What is the status of the deal the company was discussing in September?", "Has the company ever mentioned 'Project Titan'?", "Summarize the legal proceedings."
+        * `status` is "success".
+        * `intent` is "GENERAL_QUESTION".
         * `needed_periods` MUST be `null`.
 
 Respond using ONLY the JSON format described.
