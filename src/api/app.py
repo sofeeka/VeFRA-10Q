@@ -98,6 +98,7 @@ async def evaluate(user_id: str):
         raise HTTPException(status_code=500, detail=f"Internal server error. {e}")
 
 
+# TODO remove before demo
 if __name__ == "__main__":
     # uvicorn src.api.app:app --reload
     uvicorn.run(app, host="0.0.0.0", port=8000)
