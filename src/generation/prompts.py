@@ -23,10 +23,12 @@ Your task is to analyze the user's question and generate a JSON plan.
 
 1.  **First, Check for Failure Cases (Fallbacks):**
     * **K_10_FALLBACK:** Is the question about Q4, a full year (12 months), or an annual total?
-        * **Triggers:** "Q4", "fourth quarter", "three months ended December 31", "12 months ended", "full year", "annual report", "October", "November", "December".
+        * **Triggers:** "Q4", "fourth quarter", "three months ended December 31", "12 months ended", "full year", "October", "November", "December".
         * If YES, you MUST respond with:
             `{{"status": "failure", "intent": "K_10_FALLBACK", "needed_periods": null}}`
-    * **IRRELEVANT_QUESTION:** Is the question irrelevant (e.g., "What's the weather?", "Tell me a joke")?
+    * **IRRELEVANT_QUESTION:** Is the question irrelevant (e.g., "What's the weather?", "Tell me a joke", "What is someones annual salary?")?
+* 10-Qs cover financials, risk factors, legal proceedings, and management's discussion.
+        * They do **not** cover detailed executive compensation (like a CEO's salary, which is in the Proxy Statement) or non-business-related topics.
         * If YES, you MUST respond with:
             `{{"status": "failure", "intent": "IRRELEVANT_QUESTION", "needed_periods": null}}`
     * **CRITICAL EXCEPTION:** A question for "three months ended September 30" or "9 months ended September 30" is a **Q3 question**. It is NOT a fallback. If you see this, proceed to Step 2.
@@ -37,7 +39,7 @@ Your task is to analyze the user's question and generate a JSON plan.
         * `intent` is "specific_time".
         * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
         * **Mappings:** "first 6 months" -> Q2. "first 9 months" -> Q3. "3 months ended March 31" -> Q1. "3 months ended Sept 30" -> Q3.
-    * **General / Qualitative:** If the question is general, qualitative, or does not specify a time (e.g., "What are the risk factors?", "How is the company doing?").
+    * **General / Qualitative:** If the question is general, qualitative, or does not specify a time (e.g., "What are the risk factors?", "How is the company doing?", "What is the status of the deal the company was discussing in September?").
         * `status` is "success".
         * `intent` is "general_latest".
         * `needed_periods` MUST be `null`.
@@ -48,7 +50,7 @@ Respond using ONE single JSON format.
 The JSON object must have a "status" field, which is either "success" or "failure".
 
 Example on success:
-{{"status": "success", "intent": "RELEVANT", "needed_periods": ["2022 Q3", "2023 Q3"]}}
+{{"status": "success", "intent": "SPECIFIC_TIME", "needed_periods": ["2022 Q3", "2023 Q3"]}}
 {{"status": "failure", "intent": "IRRELEVANT_QUESTION", "needed_periods": []}}
 
 Question: {question}
