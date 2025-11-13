@@ -62,6 +62,7 @@ class UserKnowledgeBase:
                 "distance": DEFAULT_QDRANT_DISTANCE_METRIC,
             }
 
+        # TODO add other embeddings (sparse, dense, late)
         result: bool = self.client.recreate_collection(
             collection_name=self.collection_name, vectors_config=vector_params
         )
