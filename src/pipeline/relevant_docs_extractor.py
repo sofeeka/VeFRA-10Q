@@ -1,12 +1,12 @@
 from enum import Enum
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, List, Literal, Optional, Tuple
 
 from openai.types.responses.parsed_response import ParsedResponse
 from pydantic import BaseModel, Field
 
 from src.generation.generator import Generator
 from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
-from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL
+from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_generator
 
 
@@ -30,20 +30,11 @@ def get_relevant_docs(question: str, user_id: str) -> RelevantDocumentsModel:
     Vaildates the user query.
     Returns names of relevant documents if successful else or fallback reason.
     """
-
-    # user_sources_folder = get_user_sources_folder(user_id=user_id)
-    # paths = list(user_sources_folder.glob("*.pdf"))
-    # documents = [doc.name for doc in paths]
-
-    # latest_document = documents[-1]
-
-    # parts = latest_document.split(" ")
-    # latest_year = parts[0]
-    # latest_quarter = parts[1]
+    year, quarter = get_metadate_from_most_recent_document(user_id=user_id)
 
     prompt = CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT.format(
-        # year=latest_year,
-        # quarter=latest_quarter,
+        year=year,
+        quarter=quarter,
         question=question,
     )
 
@@ -56,3 +47,17 @@ def get_relevant_docs(question: str, user_id: str) -> RelevantDocumentsModel:
     output = response.output_parsed
 
     return output
+
+
+def get_metadate_from_most_recent_document(user_id: str) -> Tuple[str, str]:
+    user_sources_folder = get_user_sources_folder(user_id=user_id)
+    paths = list(user_sources_folder.glob("*.pdf"))
+    documents = [doc.name for doc in paths]
+
+    latest_document = documents[-1]
+
+    parts = latest_document.split(" ")
+    year = parts[0]
+    quarter = parts[1]
+
+    return (year, quarter)
