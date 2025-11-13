@@ -15,7 +15,7 @@ Here is what each 10-Q report contains. This is very important.
 * Q1 Covers only the first 3 months (e.g., "3 months ended March 31").
 * Q2 Covers the most recent 3-month period (e.g., "3 months ended June 30") AND the cumulative 6-month period (e.g., "6 months ended June 30").
 * Q3 Covers the most recent 3-month period (e.g., "3 months ended Sept 30", **"three months ended September 30"**) AND the cumulative 9-month period (e.g., "9 months ended Sept 30").
-* Q4 / Annual: You DO NOT have access to Q4 data or full-year 12-month data. Any question asking for this MUST result in a `K_10_FALLBACK`.
+* Q4 You DO NOT have access to Q4 data or 12-month data. Any question asking explicitly for Q4 or 12 months MUST result in a `K_10_FALLBACK`.
 
 Your goal is to identify the minimum set of documents required to answer the question. You assume any document you identify is available.
 
@@ -41,14 +41,14 @@ Your task is to analyze the user's question and generate a JSON plan.
         * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
         * **Mappings:** "first 6 months" -> Q2. "first 9 months" -> Q3. "3 months ended March 31" -> Q1. "3 months ended Sept 30" -> Q3.
 
-    * **Latest:** If the question is qualitative and clearly implies a request for the *most recent* company status, with no other time period mentioned.
-        * **Examples:** "How is the company doing?", "What are the current risk factors?", "What is the company's outlook?".
+    * **Latest:** If the question is qualitative, no time period mentioned, and it is logical that a financial analyst asking a question would care most about the most recent available information.
+        * **Examples:** "How is the company doing?", "What are the current risk factors?", "What is the company's outlook?", "Summarize the legal proceedings.".
         * `status` is "success".
         * `intent` is "LATEST_DOCUMENT".
         * `needed_periods` MUST be `null`.
 
-    * **General Question:** If the question is qualitative and asks about a topic or event that could be in *any* document, not just the latest. This applies if the question is general or mentions a non-specific time (like a month).
-        * **Examples:** "What is the status of the deal the company was discussing in September?", "Has the company ever mentioned 'Project Titan'?", "Summarize the legal proceedings."
+    * **General Question:** If the question is qualitative and asks about a topic or event that could be in *any* document, not just the latest. This should be the last resort.
+        * **Examples:** "What is the status of the deal the company was discussing in September?", "Has the company ever mentioned 'Project Titan'?"
         * `status` is "success".
         * `intent` is "GENERAL_QUESTION".
         * `needed_periods` MUST be `null`.
