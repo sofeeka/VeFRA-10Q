@@ -35,7 +35,7 @@ class FileUploadModel(BaseModel):
                 detail="Invalid user_id format. Contains illegal characters.",
             )
 
-        return user_id.lower()
+        return user_id.lower()  # TODO change to upper to match the names of the files
 
     @field_validator("file", mode="before")
     @classmethod
