@@ -4,7 +4,7 @@ import qdrant_client.http.models as types
 from loguru import logger
 from qdrant_client import QdrantClient
 
-from src.retrieval.embedder import EmbeddingModel
+from retrieval.embedding.embedding_model_protocol import EmbeddingModel
 from src.utils.config import (
     DEFAULT_QDRANT_DISTANCE_METRIC,
 )

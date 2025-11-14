@@ -1,27 +1,14 @@
-from typing import List, Protocol
+from typing import List
 
 from fastembed.embedding import DefaultEmbedding
 from loguru import logger
-
-
-class EmbeddingModel(Protocol):
-    """A protocol defining the interface for an embedding model."""
-
-    def embed(self, chunks: List[str]) -> List[List[float]]:
-        """Takes a list of text chunks and returns a list of embeddings."""
-        ...
-
-    @property
-    def dim(self) -> int:
-        """Returns the dimension (size) of the embeddings."""
-        ...
 
 
 class FastEmbedModel:
     """A concrete implementation of an embedding model using FastEmbed."""
 
     def __init__(self, model_name: str):
-        logger.info("Initializing FastEmbed model...")
+        logger.info("Initializing FastEmbed model for dense embeddigns...")
         self.model = DefaultEmbedding(model_name=model_name)
 
         # calculate dimension (needed for Qdrant)

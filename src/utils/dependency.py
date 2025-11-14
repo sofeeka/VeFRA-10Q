@@ -10,7 +10,8 @@ from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.retrieval.database import UserKnowledgeBase
 from src.retrieval.database_manager import QdrantCollectionManager
-from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
+from src.retrieval.embedding.dense_embedding_model import FastEmbedModel
+from src.retrieval.embedding.embedding_model_protocol import EmbeddingModel
 from src.utils.api_key_manager import get_openai_api_key
 from src.utils.config import (
     DEFAULT_CHUNK_OVERLAP,
@@ -22,7 +23,7 @@ from src.utils.config import (
 )
 
 
-@lru_cache()  # TODO rename to a more appropriate name
+@lru_cache()  # TODO change to get dense embedding model
 def get_embedder() -> EmbeddingModel:
     logger.info("Caching singleton of embedding model...")
     return FastEmbedModel(model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL)
