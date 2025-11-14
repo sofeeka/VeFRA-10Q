@@ -8,11 +8,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http.models import PointStruct
 
-from src.retrieval.embedder import EmbeddingModel
-from src.utils.config import (
-    DEFAULT_QDRANT_DISTANCE_METRIC,
-    DEFAULT_SEARCH_K,
-)
+from retrieval.embedding.dense_embedding_model import FastEmbedModel
+from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
 
 
 class ChunkPayload(BaseModel):
@@ -30,7 +27,7 @@ class UserKnowledgeBase:
         self,
         user_id: str,
         client: QdrantClient,
-        embedding_model: EmbeddingModel,
+        dense_embedding_model: FastEmbedModel,
         collection_name: str,
     ):
         logger.info(f"Initializing Knowledge Base for user {user_id}...")
@@ -38,7 +35,7 @@ class UserKnowledgeBase:
         if not user_id:
             logger.error("No user ID provided to User Knowledge Base.")
 
-        if not embedding_model:
+        if not dense_embedding_model:
             logger.error("No embedding model provided to User Knowledge Base.")
 
         if not client:
@@ -46,7 +43,7 @@ class UserKnowledgeBase:
 
         self.user_id = user_id
         self.client = client
-        self.embedding_model = embedding_model
+        self.dense_embedding_model = dense_embedding_model
         self.collection_name = collection_name
 
     def recreate_collection(self, vector_params: Any = None) -> bool:
@@ -88,9 +85,11 @@ class UserKnowledgeBase:
         """
 
         texts_to_embed: List[str] = [chunk.text for chunk in chunks]
-        embeddings: List[List[float]] = self.embedding_model.embed(texts_to_embed)
+        dense_embeddings: List[List[float]] = self.dense_embedding_model.embed(
+            texts_to_embed
+        )
 
-        if not embeddings or len(embeddings) != len(chunks):
+        if not dense_embeddings or len(dense_embeddings) != len(chunks):
             logger.error(
                 "Embedding failed or returned mismatched number of embeddings."
             )
@@ -101,7 +100,13 @@ class UserKnowledgeBase:
             payload = chunk.model_dump()
 
             payload["user_id"] = self.user_id
-            point = PointStruct(id=chunk.id, vector=embeddings[i], payload=payload)
+            point = PointStruct(
+                id=chunk.id,
+                vector={
+                    DENSE_DEFAULT: dense_embeddings[i],
+                },
+                payload=payload,
+            )
             points.append(point)
 
         if not points:
@@ -135,7 +140,7 @@ class UserKnowledgeBase:
         Queries the Qdrant collection for similar chunks based on the input query.
         """
 
-        query_vector: List[float] = self.embedding_model.embed(query)[0]
+        query_vector: List[float] = self.dense_embedding_model.embed(query)[0]
 
         user_filter = types.Filter(
             must=[
