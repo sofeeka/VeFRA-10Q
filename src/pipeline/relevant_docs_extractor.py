@@ -10,7 +10,6 @@ from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources
 from src.utils.dependency import get_generator
 
 
-# TODO test if specifying the doc even helps, maybe relevance check with fallbacks would be enough for this
 class Intent(str, Enum):
     K_10_FALLBACK = "K_10_FALLBACK"
     IRRELEVANT_QUESTION = "IRRELEVANT_QUESTION"

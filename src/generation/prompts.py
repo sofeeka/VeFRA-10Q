@@ -4,10 +4,6 @@ You are an expert financial analyst specializing in SEC filings, particularly 10
 Answer the user questions based on the content of the 10-Q sections provided. If the information is not available in the text, respond with "Information not available in the provided text."
 """
 
-# TODO maybe ask it to generate complexity of the prompt, or make the documents key-value pairs like doc: # chunks from it,
-# but tell the LLM to keep in mind that retrieval is not perfect and 1 chunk is not enough for a fact.
-# Maybe introduce classification of a task as well: fact, comparison, etc.
-
 CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT = """\
 You are an expert assistant for filtering Form 10-Q documents. You only work with Q1, Q2, and Q3 reports. You DO NOT have access to 10-K (annual) reports, which contain Q4 data.
 

@@ -4,8 +4,6 @@ import qdrant_client.http.models as types
 from loguru import logger
 from qdrant_client import QdrantClient
 
-from retrieval.embedding.embedding_model_protocol import EmbeddingModel
-
 
 class QdrantCollectionManager:
     """
@@ -16,19 +14,14 @@ class QdrantCollectionManager:
     def __init__(
         self,
         client: QdrantClient,
-        embedding_model: EmbeddingModel,
         collection_name: str,
     ):
         if not client:
             logger.error("No Qdrant client provided to Collection Manager.")
             raise ValueError("client is required.")
-        if not embedding_model:
-            logger.error("No embedding model provided to Collection Manager.")
-            raise ValueError("embedding_model is required.")
 
         self.client = client
         self.collection_name = collection_name
-        self.embedding_model = embedding_model
         logger.info(f"Initializing QdrantCollectionManager for '{collection_name}'")
 
     def recreate_collection(
