@@ -119,7 +119,9 @@ class UserKnowledgeBase:
             return False
 
         result: types.UpdateResult = self.client.upsert(
-            collection_name=self.collection_name, points=points
+            collection_name=self.collection_name,
+            points=points,
+            wait=True,
         )
 
         status: types.UpdateStatus = result.status
