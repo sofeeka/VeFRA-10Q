@@ -9,18 +9,20 @@ from src.generation.prompts import SYSTEM_PROMPT
 from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.retrieval.database import UserKnowledgeBase
+from src.retrieval.database_manager import QdrantCollectionManager
 from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
 from src.utils.api_key_manager import get_openai_api_key
 from src.utils.config import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
     DEFAULT_CHUNKING_STRATEGY,
+    DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_STORAGE_PATH,
     FAST_EMBED_DEFAULT_EMBEDDING_MODEL,
 )
 
 
-@lru_cache()
+@lru_cache()  # TODO rename to a more appropriate name
 def get_embedder() -> EmbeddingModel:
     logger.info("Caching singleton of embedding model...")
     return FastEmbedModel(model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL)
@@ -37,6 +39,16 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
     logger.info(f"Caching singleton of User Knowledge Base for user {user_id}...")
     return UserKnowledgeBase(
         user_id=user_id, embedding_model=get_embedder(), client=get_qdrant_client()
+    )
+
+
+@lru_cache()
+def get_qdrant_collection_manager() -> QdrantCollectionManager:
+    logger.info("Caching singleton of Qdrant Collection Manager...")
+    return QdrantCollectionManager(
+        client=get_qdrant_client(),
+        embedding_model=get_embedder(),
+        collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
 
 
