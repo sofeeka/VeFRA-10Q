@@ -1,13 +1,10 @@
-from typing import Any
+from typing import Mapping, Optional, Union
 
 import qdrant_client.http.models as types
 from loguru import logger
 from qdrant_client import QdrantClient
 
 from retrieval.embedding.embedding_model_protocol import EmbeddingModel
-from src.utils.config import (
-    DEFAULT_QDRANT_DISTANCE_METRIC,
-)
 
 
 class QdrantCollectionManager:
@@ -34,24 +31,22 @@ class QdrantCollectionManager:
         self.embedding_model = embedding_model
         logger.info(f"Initializing QdrantCollectionManager for '{collection_name}'")
 
-    def recreate_collection(self, vector_params: Any = None) -> bool:
+    def recreate_collection(
+        self,
+        vectors_config: Optional[
+            Union[types.VectorParams, Mapping[str, types.VectorParams]]
+        ] = None,
+        sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
+    ) -> bool:
         """
         Recreate the Qdrant collection with specified vector parameters.
         This is a destructive operation and will wipe all data.
         """
-        logger.warning(
-            f"RECREATING COLLECTION: '{self.collection_name}'. All data will be lost."
-        )
 
-        if vector_params is None:
-            vector_params = {
-                "size": self.embedding_model.dim,
-                "distance": DEFAULT_QDRANT_DISTANCE_METRIC,
-            }
-
-        # TODO: Add support for multiple vector configs (sparse, dense, etc.)
         result: bool = self.client.recreate_collection(
-            collection_name=self.collection_name, vectors_config=vector_params
+            collection_name=self.collection_name,
+            vectors_config=vectors_config,
+            sparse_vectors_config=sparse_vectors_config,
         )
 
         if not result:
@@ -87,7 +82,13 @@ class QdrantCollectionManager:
         except Exception:  # Catches "Not found" and other connection errors
             return False
 
-    def create_collection_if_not_exists(self, vector_params: Any = None) -> bool:
+    def create_collection_if_not_exists(
+        self,
+        vectors_config: Optional[
+            Union[types.VectorParams, Mapping[str, types.VectorParams]]
+        ] = None,
+        sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
+    ) -> bool:
         """
         A safer method for setup scripts. Ensures the collection and
         its indexes exist without destroying data.
@@ -100,4 +101,7 @@ class QdrantCollectionManager:
             return True
 
         logger.info(f"Collection '{self.collection_name}' not found. Creating...")
-        return self.recreate_collection(vector_params=vector_params)
+        return self.recreate_collection(
+            vectors_config=vectors_config,
+            sparse_vectors_config=sparse_vectors_config,
+        )

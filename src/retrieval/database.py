@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping, Optional, Union
 
 import qdrant_client.http.models as types
 from loguru import logger
@@ -46,21 +46,26 @@ class UserKnowledgeBase:
         self.dense_embedding_model = dense_embedding_model
         self.collection_name = collection_name
 
-    def recreate_collection(self, vector_params: Any = None) -> bool:
+    def recreate_collection(
+        self,
+        vectors_config: Optional[
+            Union[types.VectorParams, Mapping[str, types.VectorParams]]
+        ] = None,
+        sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
+    ) -> bool:
         """
         Recreate a Qdrant collection with specified vector parameters.
         """
-        logger.info(f"Recreating collection '{self.collection_name}'...")
-        # TODO: move to admin or setup script, make params obligatory
-        if vector_params is None:
-            vector_params = {
-                "size": self.embedding_model.dim,
-                "distance": DEFAULT_QDRANT_DISTANCE_METRIC,
-            }
 
-        # TODO add other embeddings (sparse, dense, late)
+        if vectors_config is None and sparse_vectors_config is None:
+            logger.warning(
+                f"Recreating collection '{self.collection_name}' with no vector configs."
+            )
+
         result: bool = self.client.recreate_collection(
-            collection_name=self.collection_name, vectors_config=vector_params
+            collection_name=self.collection_name,
+            vectors_config=vectors_config,
+            sparse_vectors_config=sparse_vectors_config,
         )
 
         try:

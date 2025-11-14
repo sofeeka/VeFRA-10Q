@@ -29,6 +29,7 @@ DEFAULT_CHUNKING_STRATEGY = "recursive"
 FAST_EMBED_DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"  # TODO rename
 DENSE_DEFAULT = "dense_default"
 
+
 # database
 DEFAULT_QDRANT_COLLECTION_NAME = "VeFRA-10Q-Collection"
 DEFAULT_QDRANT_STORAGE_PATH = Path(DATA_DIR_PATH, "./qdrant_storage")
