@@ -5,6 +5,7 @@ from loguru import logger
 from qdrant_client import QdrantClient
 
 
+# TODO improve error handling
 class QdrantCollectionManager:
     """
     Manages the lifecycle and schema of a Qdrant collection.
@@ -44,6 +45,12 @@ class QdrantCollectionManager:
 
         if not result:
             logger.error(f"Failed to recreate collection '{self.collection_name}'")
+            return False
+
+        result: bool = self.create_payload_index(field_name="user_id")
+
+        if not result:
+            logger.error("Failed to create index.")
             return False
 
         logger.info(f"Successfully recreated collection '{self.collection_name}'")

@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Dict, List, Mapping, Optional, Union
+from typing import Any, Dict, List
 
 import qdrant_client.http.models as types
 from loguru import logger
@@ -46,44 +46,6 @@ class UserKnowledgeBase:
         self.client = client
         self.dense_embedding_model = dense_embedding_model
         self.collection_name = collection_name
-
-    def recreate_collection(
-        self,
-        vectors_config: Optional[
-            Union[types.VectorParams, Mapping[str, types.VectorParams]]
-        ] = None,
-        sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
-    ) -> bool:
-        """
-        Recreate a Qdrant collection with specified vector parameters.
-        """
-
-        if vectors_config is None and sparse_vectors_config is None:
-            logger.warning(
-                f"Recreating collection '{self.collection_name}' with no vector configs."
-            )
-
-        result: bool = self.client.recreate_collection(
-            collection_name=self.collection_name,
-            vectors_config=vectors_config,
-            sparse_vectors_config=sparse_vectors_config,
-        )
-
-        try:
-            self.client.create_payload_index(
-                collection_name=self.collection_name,
-                field_name="user_id",
-                field_schema=types.PayloadSchemaType.KEYWORD,
-                wait=True,
-            )
-            logger.info(
-                f"Created payload index on 'user_id' for collection '{self.collection_name}'"
-            )
-        except Exception as e:
-            logger.error(f"Failed to create payload index: {e}")
-            return False
-
-        return result
 
     def add_chunks(self, chunks: List[ChunkPayload]) -> bool:
         """
