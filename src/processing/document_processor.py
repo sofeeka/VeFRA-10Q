@@ -8,6 +8,7 @@ from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
 from src.utils.config import TABLE_DIR_PATH
+from src.utils.exceptions import FileIOError, ProcessingError, TableExtractionError
 
 TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
     r"\[TABLE_REFERENCE:\s*([^\]]+)\]"
@@ -23,6 +24,11 @@ def process_document_for_chunking(document: DoclingDocument) -> str:
     logger.info(f"Preparing document {document.name} for chunking...")
 
     processed_doc: str = _extract_tables_from_document(document=document)
+
+    if not processed_doc:
+        raise ProcessingError(
+            f"Tables extracted without errors, but the processed document {document.name} is empty."
+        )
     return processed_doc
 
 
@@ -30,9 +36,21 @@ def process_documents_for_chunking(documents: List[DoclingDocument]) -> List[str
     """
     Processes documents to extract text and extract tables preparing them for chunking.
     """
-    logger.info(f"Preparing {len(documents)} documents for chunking...")
+    logger.info(f"Processing {len(documents)} documents for chunking...")
 
-    processed_docs = [process_document_for_chunking(doc) for doc in documents]
+    processed_docs = []
+    for doc in documents:
+        try:
+            processed_doc = process_document_for_chunking(doc)
+            processed_docs.append(processed_doc)
+        except (TableExtractionError, FileIOError, ProcessingError) as e:
+            logger.warning(
+                f"Skipping document {doc.name}, failed to process tables: {e.message}"
+            )
+
+    logger.info(
+        f"Processing complete. Successfully processed {len(processed_docs)}/{len(documents)} documents."
+    )
     return processed_docs
 
 
@@ -41,9 +59,12 @@ def process_chunk_after_retrieval(chunk: str) -> str:
     Processes a retrieved text chunk to insert tables back into the text.
     """
     logger.info(f"Processing a retrieved chunk with length {len(chunk)}...")
-    logger.info(f"\n---\n{chunk}\n---\n")
+    logger.info(f"\n---\n{chunk}\n---\n")  # TODO probably set level to debug
 
     processed_chunk = _insert_tables_into_chunk(chunk_text=chunk)
+
+    if not processed_chunk:
+        logger.warning("Inserted tables without errors, but processed chunk is empty.")
     return processed_chunk
 
 
@@ -96,17 +117,24 @@ def _extract_tables_from_document(
 
             try:
                 table_md = item.export_to_markdown(doc=document)
-                table_filepath = table_dir / f"{table_id}.md"
+            except Exception as e:
+                logger.error(f"Failed to save table {table_id}: {e}")
+                raise TableExtractionError(
+                    f"Failed to extract table with id: {table_id} from document {document.name}"
+                ) from e
+
+            try:
+                table_filepath = (
+                    table_dir / f"{table_id}.md"
+                )  # TODO add user_id to save tables into subfolders
 
                 with open(table_filepath, "w", encoding="utf-8") as f:
                     f.write(table_md)
-
             except IOError as e:
                 logger.error(f"Failed to save table {table_id}: {e}")
-                continue
-            except Exception as e:
-                logger.error(f"Failed to export table {table_id}: {e}")
-                continue
+                raise FileIOError(
+                    f"Failed to save table from document {document.name} with id: {table_id}"
+                ) from e
 
             reference_string = f"\n\n[TABLE_REFERENCE: {table_id}]\n\n"
             processed_items.append(reference_string)
@@ -137,7 +165,7 @@ def _insert_tables_into_chunk(chunk_text: str, table_dir: Path = TABLE_DIR_PATH)
             return f"\n\n{table_md}\n\n"
 
         except FileNotFoundError:
-            logger.warning(f"Could not find table file: {table_filepath}")
+            logger.critical(f"Table file not found: {table_filepath}")
             return f"\n\n[TABLE_NOT_FOUND: {table_id}]\n\n"
         except IOError as e:
             logger.error(f"Error reading table file {table_filepath}: {e}")

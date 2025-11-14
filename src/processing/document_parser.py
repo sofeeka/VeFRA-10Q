@@ -1,10 +1,12 @@
 from pathlib import Path
 from typing import List, Union
 
-from docling.datamodel.document import TableItem, TextItem
 from docling.document_converter import DocumentConverter
+from docling.exceptions import ConversionError
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
+
+from src.utils.exceptions import DocumentParsingError
 
 
 class DocumentParser:
@@ -17,17 +19,28 @@ class DocumentParser:
         """
         Parses a single document from a given full file path.
         """
+        filepath = Path(filepath)
         logger.info(f"Parsing document at: {filepath}...")
 
         try:
             result = self.converter.convert(filepath)
-            document = result.document
-            if not document.name:
-                document.name = Path(filepath).name
-            return document
-        except Exception as e:
+        except ConversionError as e:
             logger.error(f"Failed to parse document at {filepath}: {e}")
-            raise e
+            raise DocumentParsingError(
+                f"Failed to parse document at {filepath}: {e}"
+            ) from e
+
+        document = result.document
+        if not document:
+            raise DocumentParsingError(
+                f"No parsing errors were raised, but document parsed from {filepath} is empty."
+            )
+
+        if not document.name:
+            document.name = Path(filepath).name
+
+        logger.info(f"Successfully parsed {filepath}.")
+        return document
 
     def parse_documents_in_directory(
         self, directory_path: Union[str, Path]
@@ -43,29 +56,15 @@ class DocumentParser:
         documents: List[DoclingDocument] = []
 
         for filepath in directory_path.glob("*.pdf"):
-            document: DoclingDocument = self.parse_document(filepath)
+            try:
+                document: DoclingDocument = self.parse_document(filepath)
+                documents.append(document)
+            except DocumentParsingError as e:
+                logger.warning(
+                    f"Skipping file {filepath.name}, failed to parse: {e.message}"
+                )
 
-            if document is None:
-                logger.error(f"Could not parse document at {filepath}")
-                continue
-
-            documents.append(document)
-
+        logger.info(
+            f"Parsing complete. Successfully parsed {len(documents)} documents."
+        )
         return documents
-
-    @staticmethod  # TODO move to utils.py
-    def print_items_from_document(document: DoclingDocument):
-        """
-        Utility function to print all text and table items from a document.
-        """
-        logger.info(f"Printing items from document {document.name}...")
-
-        for item, _ in document.iterate_items():
-            if isinstance(item, TableItem):
-                print("--- [TABLE START] ---")
-                print(item.export_to_markdown(doc=document))
-                print("--- [TABLE END] ---")
-            elif isinstance(item, TextItem):
-                print(item.text.strip())
-            else:
-                print(f"Unknown item type: {type(item)}")

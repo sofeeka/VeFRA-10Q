@@ -12,6 +12,7 @@ from src.evaluation.rag_evaluator import run_evaluation
 from src.pipeline.query_answering import answer_query
 from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL
 from src.utils.dependency import get_generator, get_user_knowledge_base
+from src.utils.exceptions import VeFRAException
 
 app = FastAPI(
     title="VeFRA PDF Document Ingestion API", description="API to accept PDF documents."
@@ -25,23 +26,33 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
     and triggers the ingestion pipeline.
     """
 
-    model = None
     try:
         model = FileUploadModel(file=input_file, user_id=input_user_id)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"Unexpected error during validation: {e}")
-        raise HTTPException(status_code=500, detail="An internal error occurred.")
 
-    try:
-        response: JSONResponse = await process_document_ingestion(model=model)
-        return response
-    except HTTPException as e:
-        raise e
+        result: bool = await process_document_ingestion(model=model)
+        if result:
+            return JSONResponse(
+                content={
+                    "filename": model.file.filename,
+                },
+                status_code=200,
+            )
+        else:
+            raise VeFRAException(
+                "No errors were raised, but document ingestion pipeline did not succeed."
+            )
+
+    except VeFRAException as e:  # TODO move to decorator
+        raise HTTPException(
+            status_code=e.status_code,
+            detail={
+                "message": e.message,
+                "details": e.details,
+            },
+        )
     except Exception as e:
         logger.error(f"Error handling upload for {model.file.filename}: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
 
 
 @app.post("/{user_id}/generate/")

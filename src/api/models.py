@@ -2,14 +2,20 @@ import re
 from pathlib import Path
 from typing import Optional, Union
 
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 from loguru import logger
 from pydantic import BaseModel, field_validator, model_validator
 
 from src.utils.config import get_user_sources_filepath
+from src.utils.exceptions import (
+    DataValidationError,
+    FileConflictError,
+    InvalidFileNameError,
+    UnsupportedFileTypeError,
+)
 
 
-# TODO improve error handling, maybe use loguru for catching raising exceptions
+# TODO check that user_id exists or at least has uploaded files
 class FileUploadModel(BaseModel):
     file: UploadFile
     user_id: str
@@ -27,12 +33,11 @@ class FileUploadModel(BaseModel):
         """
 
         if not user_id:
-            raise HTTPException(status_code=400, detail="user_id is required.")
+            raise DataValidationError(message="User id is required.")
 
         if ".." in user_id or "/" in user_id or "\\" in user_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid user_id format. Contains illegal characters.",
+            raise DataValidationError(
+                message="Invalid user_id format. Contains illegal characters.",
             )
 
         return user_id.lower()  # TODO change to upper to match the names of the files
@@ -47,24 +52,22 @@ class FileUploadModel(BaseModel):
         """
 
         if not file:
-            raise HTTPException(status_code=400, detail="File is required.")
+            raise DataValidationError(message="File is required.")
 
         filename = file.filename
         if not filename:
-            raise HTTPException(status_code=400, detail="File has no filename.")
+            raise DataValidationError(message="File has no filename.")
 
         # file extension validation
         if not filename.lower().endswith(".pdf"):
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid file type. Only .pdf files are accepted.",
+            raise UnsupportedFileTypeError(
+                message="Invalid file type. Only .pdf files are accepted.",
             )
 
         return file
 
     @model_validator(mode="after")
     def check_for_file_conflict(self) -> "FileUploadModel":
-        # TODO maybe get rid of user id == company name check
         """
         Validates the model as a whole after user_id and file were validated.
 
@@ -85,9 +88,8 @@ class FileUploadModel(BaseModel):
             logger.warning(
                 f"Invalid filename format for user {self.user_id}: {filename}"
             )
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid filename format. "
+            raise InvalidFileNameError(
+                message="Invalid filename format. "
                 "Expected 'YYYY QN COMPANY.pdf' (e.g., '2022 Q1 MSFT.pdf').",
             )
 
@@ -95,16 +97,14 @@ class FileUploadModel(BaseModel):
         quarter = match.group(2)
         company = match.group(3).strip()
 
-        # TODO maybe get rid of this check
         # company name matches user_id validator
         if company.lower() != self.user_id:
             logger.warning(
                 f"Filename company '{company}' does not match user_id '{self.user_id}'"
             )
-            raise HTTPException(
-                status_code=400,  # 400 Bad Request is appropriate
-                detail=f"Company name in filename ('{company}') "
-                f"does not match your user ID.",
+            raise DataValidationError(
+                message=f"Company name in filename ('{company}') "
+                f"does not match your user ID {self.user_id}",
             )
 
         self.parsed_year = year
@@ -118,9 +118,8 @@ class FileUploadModel(BaseModel):
         # file conflict validation
         if permanent_filepath.exists():
             logger.warning(f"File conflict: {permanent_filepath} already exists.")
-            raise HTTPException(
-                status_code=409,  # 409 Conflict
-                detail=f"File '{self.file.filename}' already exists. "
+            raise FileConflictError(
+                message=f"File '{self.file.filename}' already exists. "
                 "Please rename the file or delete the existing one first.",
             )
 

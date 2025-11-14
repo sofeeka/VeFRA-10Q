@@ -10,6 +10,7 @@ from qdrant_client.http.models import PointStruct
 
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
+from src.utils.exceptions import DatabaseError
 
 
 class ChunkPayload(BaseModel):
@@ -98,7 +99,9 @@ class UserKnowledgeBase:
             logger.error(
                 "Embedding failed or returned mismatched number of embeddings."
             )
-            return False
+            raise DatabaseError(
+                "Embedding failed or returned mismatched number of embeddings."
+            )
 
         points: List[PointStruct] = []
         for i, chunk in enumerate(chunks):
@@ -116,7 +119,9 @@ class UserKnowledgeBase:
 
         if not points:
             logger.error("Embedded data successfully, but found no points to upsert.")
-            return False
+            return DatabaseError(
+                "Embedded data successfully, but found no points to upsert."
+            )
 
         result: types.UpdateResult = self.client.upsert(
             collection_name=self.collection_name,
@@ -128,17 +133,15 @@ class UserKnowledgeBase:
 
         if status == types.UpdateStatus.COMPLETED:
             logger.info(f"Upsert successful (Operation ID: {result.operation_id})")
-            return True
 
         elif status == types.UpdateStatus.ACKNOWLEDGED:
             logger.warning(
                 f"Upsert acknowledged, but processing in background (Operation ID: {result.operation_id})"
             )
-            return True
 
         else:
             logger.error(f"Upsert failed with status: {result.status}")
-            return False
+            raise DatabaseError(f"Upsert failed with status: {result.status}")
 
     def get_search_results(
         self, query: str, limit: int = DEFAULT_SEARCH_K

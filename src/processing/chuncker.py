@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from src.utils.exceptions import ChunkingError
+
 
 # TODO refactor remove class, make different chunking functions
 class DocumentChunker:
@@ -19,18 +21,22 @@ class DocumentChunker:
 
     def chunk_text(self, text: str) -> List[str]:
         """Chunk document based on the selected strategy"""
+        chunks = None
 
         if self.strategy == "fixed":
-            return self._fixed_chunking(text)
+            chunks = self._fixed_chunking(text)
 
         elif self.strategy == "overlapping":
-            return self._overlapping_chunking(text)
+            chunks = self._overlapping_chunking(text)
 
         elif self.strategy == "recursive":
-            return self._recursive_character_chunking(text)
+            chunks = self._recursive_character_chunking(text)
 
         else:
-            raise ValueError(f"Unknown chunking strategy: {self.strategy}")
+            raise ChunkingError(f"Unknown chunking strategy: {self.strategy}")
+
+        if not chunks:
+            raise ChunkingError(f"Failed to chunk text with {len(text)} characters.")
 
     def _fixed_chunking(self, text: str) -> List[str]:
         """Split text into fixed-size chunks"""

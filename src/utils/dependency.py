@@ -50,7 +50,6 @@ def get_qdrant_collection_manager() -> QdrantCollectionManager:
     logger.info("Caching singleton of Qdrant Collection Manager...")
     return QdrantCollectionManager(
         client=get_qdrant_client(),
-        dense_embedding_model=get_dense_embedding_model(),
         collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
 
