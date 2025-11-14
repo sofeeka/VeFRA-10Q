@@ -38,7 +38,10 @@ def get_qdrant_client() -> QdrantClient:
 def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
     logger.info(f"Caching singleton of User Knowledge Base for user {user_id}...")
     return UserKnowledgeBase(
-        user_id=user_id, embedding_model=get_embedder(), client=get_qdrant_client()
+        user_id=user_id,
+        embedding_model=get_embedder(),
+        client=get_qdrant_client(),
+        collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
 
 

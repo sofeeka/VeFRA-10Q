@@ -10,7 +10,6 @@ from qdrant_client.http.models import PointStruct
 
 from src.retrieval.embedder import EmbeddingModel
 from src.utils.config import (
-    DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_DISTANCE_METRIC,
     DEFAULT_SEARCH_K,
 )
@@ -32,7 +31,7 @@ class UserKnowledgeBase:
         user_id: str,
         client: QdrantClient,
         embedding_model: EmbeddingModel,
-        collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME,
+        collection_name: str,
     ):
         logger.info(f"Initializing Knowledge Base for user {user_id}...")
 
