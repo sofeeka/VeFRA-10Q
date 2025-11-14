@@ -26,7 +26,7 @@ DEFAULT_CHUNKING_STRATEGY = "recursive"
 
 # embedding
 # DEFAULT_EMBEDDING_MODEL = "models/text-embedding-004" # google embedding
-FAST_EMBED_DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+FAST_EMBED_DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"  # TODO rename
 
 
 # database
