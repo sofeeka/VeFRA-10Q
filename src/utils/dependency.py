@@ -10,8 +10,7 @@ from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.retrieval.database import UserKnowledgeBase
 from src.retrieval.database_manager import QdrantCollectionManager
-from src.retrieval.embedding.dense_embedding_model import FastEmbedModel
-from src.retrieval.embedding.embedding_model_protocol import EmbeddingModel
+from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.api_key_manager import get_openai_api_key
 from src.utils.config import (
     DEFAULT_CHUNK_OVERLAP,
@@ -19,14 +18,14 @@ from src.utils.config import (
     DEFAULT_CHUNKING_STRATEGY,
     DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_STORAGE_PATH,
-    FAST_EMBED_DEFAULT_EMBEDDING_MODEL,
+    DENSE_EMBEDDING_MODEL_NAME,
 )
 
 
-@lru_cache()  # TODO change to get dense embedding model
-def get_embedder() -> EmbeddingModel:
+@lru_cache()
+def get_dense_embedding_model() -> DenseEmbeddingModel:
     logger.info("Caching singleton of embedding model...")
-    return FastEmbedModel(model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL)
+    return DenseEmbeddingModel(model_name=DENSE_EMBEDDING_MODEL_NAME)
 
 
 @lru_cache()
@@ -40,7 +39,7 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
     logger.info(f"Caching singleton of User Knowledge Base for user {user_id}...")
     return UserKnowledgeBase(
         user_id=user_id,
-        dense_embedding_model=get_embedder(),
+        dense_embedding_model=get_dense_embedding_model(),
         client=get_qdrant_client(),
         collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
@@ -51,7 +50,7 @@ def get_qdrant_collection_manager() -> QdrantCollectionManager:
     logger.info("Caching singleton of Qdrant Collection Manager...")
     return QdrantCollectionManager(
         client=get_qdrant_client(),
-        embedding_model=get_embedder(),
+        dense_embedding_model=get_dense_embedding_model(),
         collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
 

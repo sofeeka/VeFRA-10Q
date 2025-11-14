@@ -4,7 +4,7 @@ from fastembed.embedding import DefaultEmbedding
 from loguru import logger
 
 
-class FastEmbedModel:
+class DenseEmbeddingModel:
     """A concrete implementation of an embedding model using FastEmbed."""
 
     def __init__(self, model_name: str):

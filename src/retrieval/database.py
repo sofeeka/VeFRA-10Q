@@ -8,7 +8,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http.models import PointStruct
 
-from retrieval.embedding.dense_embedding_model import FastEmbedModel
+from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
 
 
@@ -27,7 +27,7 @@ class UserKnowledgeBase:
         self,
         user_id: str,
         client: QdrantClient,
-        dense_embedding_model: FastEmbedModel,
+        dense_embedding_model: DenseEmbeddingModel,
         collection_name: str,
     ):
         logger.info(f"Initializing Knowledge Base for user {user_id}...")

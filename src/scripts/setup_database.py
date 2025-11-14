@@ -2,9 +2,12 @@ from loguru import logger
 from qdrant_client import models
 
 from src.retrieval.database_manager import QdrantCollectionManager
-from src.retrieval.embedding.dense_embedding_model import FastEmbedModel
+from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.config import DENSE_DEFAULT
-from src.utils.dependency import get_embedder, get_qdrant_collection_manager
+from src.utils.dependency import (
+    get_dense_embedding_model,
+    get_qdrant_collection_manager,
+)
 
 
 def setup_database() -> bool:
@@ -12,7 +15,7 @@ def setup_database() -> bool:
 
     logger.info("Setting the database up...")
     manager: QdrantCollectionManager = get_qdrant_collection_manager()
-    dense_embedding_model: FastEmbedModel = get_embedder()
+    dense_embedding_model: DenseEmbeddingModel = get_dense_embedding_model()
     dense_configs = {
         DENSE_DEFAULT: models.VectorParams(
             size=dense_embedding_model.dim,
