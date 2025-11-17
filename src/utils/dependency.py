@@ -34,7 +34,7 @@ def get_qdrant_client() -> QdrantClient:
     return QdrantClient(path=DEFAULT_QDRANT_STORAGE_PATH)
 
 
-@lru_cache()
+@lru_cache(maxsize=None)
 def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
     logger.info(f"Caching singleton of User Knowledge Base for user {user_id}...")
     return UserKnowledgeBase(
