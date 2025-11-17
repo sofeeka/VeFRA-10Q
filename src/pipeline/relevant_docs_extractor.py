@@ -1,9 +1,6 @@
 from typing import Optional
 
-from openai.types.responses.parsed_response import ParsedResponse
-
 from src.data_models.retrieval import Intent, RelevantDocumentsModel
-from src.generation.generator import Generator
 from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_generator
@@ -23,9 +20,9 @@ def get_output_parsed_for_relevant_document_extraction(
         question=question,
     )
 
-    generator: Generator = get_generator(model=CHOOSING_RELEVANT_DOCUMENTS_MODEL)
+    generator = get_generator(model=CHOOSING_RELEVANT_DOCUMENTS_MODEL)
 
-    response: ParsedResponse = generator.generate_response(
+    response = generator.generate_response(
         prompt=prompt, text_format=RelevantDocumentsModel
     )
 
@@ -39,7 +36,7 @@ def get_relevant_docs(question: str, user_id: str) -> list[tuple[str, str]]:
     If unsuccessful raises an Exception.
     """
 
-    output: ParsedResponse = get_output_parsed_for_relevant_document_extraction(
+    output = get_output_parsed_for_relevant_document_extraction(
         question=question, user_id=user_id
     )
 
@@ -99,7 +96,7 @@ def get_metadata_from_all_user_documents(user_id: str) -> list[tuple[str, str]]:
     """Gets metadata from ALL documents, skipping any bad filenames."""
     filenames = get_filenames_of_all_user_documents(user_id=user_id)
 
-    metadata: list[tuple[str, str]] = []
+    metadata = []
     for filename in filenames:
         data = extract_year_quarter_from_filename(filename=filename)
         metadata.append(data)

@@ -14,12 +14,10 @@ def answer_query(
     """
 
     # str -> embedding -> chunks without tables
-    chunks: list[str] = db.get_related_chunks(query=query)
+    chunks = db.get_related_chunks(query=query)
 
     # chunks without tables -> rebuilt chunks
-    rebuilt_chunks: list[str] = process_chunks_after_retrieval(
-        chunks=chunks, user_id=db.user_id
-    )
+    rebuilt_chunks = process_chunks_after_retrieval(chunks=chunks, user_id=db.user_id)
 
     # (context (rebuilt chunks) + user question -> Generator) + system prompt - > LLM response
     context: str = "\n---\n".join(rebuilt_chunks)

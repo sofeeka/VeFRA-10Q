@@ -37,7 +37,7 @@ class QdrantCollectionManager:
         This is a destructive operation and will wipe all data.
         """
 
-        result: bool = self.client.recreate_collection(
+        result = self.client.recreate_collection(
             collection_name=self.collection_name,
             vectors_config=vectors_config,
             sparse_vectors_config=sparse_vectors_config,
@@ -47,7 +47,7 @@ class QdrantCollectionManager:
             logger.error(f"Failed to recreate collection '{self.collection_name}'")
             return False
 
-        result: bool = self.create_payload_index(field_name="user_id")
+        result = self.create_payload_index(field_name="user_id")
 
         if not result:
             logger.error("Failed to create index.")

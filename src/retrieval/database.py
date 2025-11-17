@@ -39,10 +39,8 @@ class UserKnowledgeBase:
         Embed and add text chunks to the Qdrant collection.
         """
 
-        texts_to_embed: list[str] = [chunk.text for chunk in chunks]
-        dense_embeddings: list[list[float]] = self.dense_embedding_model.embed(
-            texts_to_embed
-        )
+        texts_to_embed = [chunk.text for chunk in chunks]
+        dense_embeddings = self.dense_embedding_model.embed(texts_to_embed)
 
         if not dense_embeddings or len(dense_embeddings) != len(chunks):
             logger.error(
@@ -52,7 +50,7 @@ class UserKnowledgeBase:
                 "Embedding failed or returned mismatched number of embeddings."
             )
 
-        points: list[PointStruct] = []
+        points = []
         for i, chunk in enumerate(chunks):
             payload = chunk.model_dump()
 
@@ -72,13 +70,13 @@ class UserKnowledgeBase:
                 "Embedded data successfully, but found no points to upsert."
             )
 
-        result: types.UpdateResult = self.client.upsert(
+        result = self.client.upsert(
             collection_name=self.collection_name,
             points=points,
             wait=True,
         )
 
-        status: types.UpdateStatus = result.status
+        status = result.status
 
         if status == types.UpdateStatus.COMPLETED:
             logger.info(f"Upsert successful (Operation ID: {result.operation_id})")
@@ -99,7 +97,7 @@ class UserKnowledgeBase:
         Queries the Qdrant collection for similar chunks based on the input query.
         """
 
-        query_vector: list[float] = self.dense_embedding_model.embed(query)[0]
+        query_vector = self.dense_embedding_model.embed(query)[0]
 
         user_filter = types.Filter(
             must=[
@@ -109,7 +107,7 @@ class UserKnowledgeBase:
             ]
         )
 
-        search_results: list[types.ScoredPoint] = self.client.search(
+        search_results = self.client.search(
             collection_name=self.collection_name,
             query_vector=(DENSE_DEFAULT, query_vector),
             query_filter=user_filter,
@@ -131,12 +129,12 @@ class UserKnowledgeBase:
         Retrieves text chunks related to the input query.
         """
 
-        results: list[ScoredPoint] = self.get_search_results(query=query, limit=limit)
+        results = self.get_search_results(query=query, limit=limit)
 
         if not results:
             return []
 
-        chunks: list[str] = [
+        chunks = [
             result.payload["text"]
             for result in results
             if result.payload and "text" in result.payload

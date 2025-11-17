@@ -30,7 +30,7 @@ class Generator:
         logger.info(f"User prompt: {prompt}")
         logger.info(f"System prompt: {self.system_prompt}")
 
-        response: ParsedResponse = self.client.responses.parse(
+        response = self.client.responses.parse(
             model=self.model,
             input=[
                 {"role": "system", "content": self.system_prompt},

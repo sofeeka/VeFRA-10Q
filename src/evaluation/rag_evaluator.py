@@ -46,8 +46,8 @@ def run_evaluation(user_id: str) -> pd.DataFrame:
         }
     )
 
-    # TODO do something so that one incorrectly arsed response does not fail hte whole system. maybe evaluate
-    # rows one by one, or maybe there is a setting to retry or miss generated answers.
+    # TODO do something so that one incorrectly parsed response does not fail the whole system. maybe evaluate
+    # rows one by one, or maybe there is a setting to retry or pass on generated answers.
     context_based_evals = Dataset.from_pandas(
         eval_df,
         data_definition=DataDefinition(

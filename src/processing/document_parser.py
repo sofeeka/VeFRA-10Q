@@ -52,11 +52,11 @@ class DocumentParser:
         if not isinstance(directory_path, Path):
             directory_path = Path(directory_path)
 
-        documents: list[DoclingDocument] = []
+        documents = []
 
         for filepath in directory_path.glob("*.pdf"):
             try:
-                document: DoclingDocument = self.parse_document(filepath)
+                document = self.parse_document(filepath)
                 documents.append(document)
             except DocumentParsingError as e:
                 logger.warning(

@@ -1,7 +1,5 @@
 import asyncio
 
-import pandas as pd
-import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
@@ -85,7 +83,7 @@ async def evaluate(user_id: str):
     Runs the evaluation of the RAG system.
     """
     try:
-        df: pd.DataFrame = run_evaluation(
+        df = run_evaluation(
             user_id=user_id
         )  # TODO mention user_id in the benchmark dataset or create a testing user with all docs for this
         ranking = round(df["Ranking for Question with Contexts"].mean(), 2)
@@ -105,9 +103,3 @@ async def evaluate(user_id: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error. {e}")
-
-
-# TODO remove before demo
-if __name__ == "__main__":
-    # uvicorn src.api.app:app --reload
-    uvicorn.run(app, host="0.0.0.0", port=8000)

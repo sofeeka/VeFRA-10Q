@@ -21,9 +21,7 @@ def process_document_for_chunking(document: DoclingDocument, user_id: str) -> st
     """
     logger.info(f"Preparing document {document.name} for chunking...")
 
-    processed_doc: str = _extract_tables_from_document(
-        document=document, user_id=user_id
-    )
+    processed_doc = _extract_tables_from_document(document=document, user_id=user_id)
 
     if not processed_doc:
         raise ProcessingError(

@@ -5,7 +5,6 @@ from loguru import logger
 
 from src.data_models.api import FileUploadModel
 from src.pipeline.data_ingestion import ingest_single_document
-from src.retrieval.database import UserKnowledgeBase
 from src.utils.dependency import get_user_knowledge_base
 from src.utils.exceptions import FileIOError
 
@@ -39,7 +38,7 @@ async def process_document_ingestion(model: FileUploadModel):
 
     await save_uploaded_document(model=model)
 
-    db: UserKnowledgeBase = get_user_knowledge_base(user_id=model.user_id)
+    db = get_user_knowledge_base(user_id=model.user_id)
     try:
         ingest_single_document(model=model, db=db)
     except Exception as e:
