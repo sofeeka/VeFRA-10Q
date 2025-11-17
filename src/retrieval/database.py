@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Dict, List
+from typing import Any
 
 import qdrant_client.http.models as types
 from loguru import logger
@@ -19,7 +19,7 @@ class ChunkPayload(BaseModel):
     """
 
     text: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
@@ -47,13 +47,13 @@ class UserKnowledgeBase:
         self.dense_embedding_model = dense_embedding_model
         self.collection_name = collection_name
 
-    def add_chunks(self, chunks: List[ChunkPayload]) -> bool:
+    def add_chunks(self, chunks: list[ChunkPayload]) -> bool:
         """
         Embed and add text chunks to the Qdrant collection.
         """
 
-        texts_to_embed: List[str] = [chunk.text for chunk in chunks]
-        dense_embeddings: List[List[float]] = self.dense_embedding_model.embed(
+        texts_to_embed: list[str] = [chunk.text for chunk in chunks]
+        dense_embeddings: list[list[float]] = self.dense_embedding_model.embed(
             texts_to_embed
         )
 
@@ -65,7 +65,7 @@ class UserKnowledgeBase:
                 "Embedding failed or returned mismatched number of embeddings."
             )
 
-        points: List[PointStruct] = []
+        points: list[PointStruct] = []
         for i, chunk in enumerate(chunks):
             payload = chunk.model_dump()
 
@@ -112,7 +112,7 @@ class UserKnowledgeBase:
         Queries the Qdrant collection for similar chunks based on the input query.
         """
 
-        query_vector: List[float] = self.dense_embedding_model.embed(query)[0]
+        query_vector: list[float] = self.dense_embedding_model.embed(query)[0]
 
         user_filter = types.Filter(
             must=[
@@ -122,7 +122,7 @@ class UserKnowledgeBase:
             ]
         )
 
-        search_results: List[types.ScoredPoint] = self.client.search(
+        search_results: list[types.ScoredPoint] = self.client.search(
             collection_name=self.collection_name,
             query_vector=(DENSE_DEFAULT, query_vector),
             query_filter=user_filter,
@@ -139,7 +139,7 @@ class UserKnowledgeBase:
 
     def get_related_chunks(
         self, query: str, limit: int = DEFAULT_SEARCH_K
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Retrieves text chunks related to the input query.
         """
@@ -149,7 +149,7 @@ class UserKnowledgeBase:
         if not results:
             return []
 
-        chunks: List[str] = [
+        chunks: list[str] = [
             result.payload["text"]
             for result in results
             if result.payload and "text" in result.payload

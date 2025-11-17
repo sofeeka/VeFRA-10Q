@@ -1,7 +1,7 @@
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Final, List
+from typing import Final
 
 from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
@@ -47,7 +47,7 @@ def process_chunk_after_retrieval(chunk: str, user_id: str) -> str:
     return processed_chunk
 
 
-def process_chunks_after_retrieval(chunks: List[str], user_id: str) -> List[str]:
+def process_chunks_after_retrieval(chunks: list[str], user_id: str) -> list[str]:
     """
     Processes retrieved text chunks to insert tables back into the text.
     """

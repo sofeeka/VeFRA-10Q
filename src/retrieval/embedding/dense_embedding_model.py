@@ -1,5 +1,3 @@
-from typing import List
-
 from fastembed.embedding import DefaultEmbedding
 from loguru import logger
 
@@ -16,7 +14,7 @@ class DenseEmbeddingModel:
         self._dim = len(dummy_embedding)
         logger.info(f"Initialized model [{model_name}] with {self._dim} dimensions.")
 
-    def embed(self, chunks: List[str]) -> List[List[float]]:
+    def embed(self, chunks: list[str]) -> list[list[float]]:
         """Takes a list of text chunks and returns a list of embeddings."""
         return list(self.model.embed(chunks))
 

@@ -1,4 +1,4 @@
-from typing import Mapping, Optional, Union
+from typing import Mapping, Optional
 
 import qdrant_client.http.models as types
 from loguru import logger
@@ -28,7 +28,7 @@ class QdrantCollectionManager:
     def recreate_collection(
         self,
         vectors_config: Optional[
-            Union[types.VectorParams, Mapping[str, types.VectorParams]]
+            types.VectorParams | Mapping[str, types.VectorParams]
         ] = None,
         sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
     ) -> bool:
@@ -85,7 +85,7 @@ class QdrantCollectionManager:
     def create_collection_if_not_exists(
         self,
         vectors_config: Optional[
-            Union[types.VectorParams, Mapping[str, types.VectorParams]]
+            types.VectorParams | Mapping[str, types.VectorParams]
         ] = None,
         sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
     ) -> bool:

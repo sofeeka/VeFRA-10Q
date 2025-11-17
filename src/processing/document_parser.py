@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List, Union
 
 from docling.document_converter import DocumentConverter
 from docling.exceptions import ConversionError
@@ -15,7 +14,7 @@ class DocumentParser:
             converter = DocumentConverter()
         self.converter = converter
 
-    def parse_document(self, filepath: Union[str, Path]) -> DoclingDocument:
+    def parse_document(self, filepath: str | Path) -> DoclingDocument:
         """
         Parses a single document from a given full file path.
         """
@@ -43,8 +42,8 @@ class DocumentParser:
         return document
 
     def parse_documents_in_directory(
-        self, directory_path: Union[str, Path]
-    ) -> List[DoclingDocument]:
+        self, directory_path: str | Path
+    ) -> list[DoclingDocument]:
         """
         Locates and parses all PDF documents in a given directory.
         """
@@ -53,7 +52,7 @@ class DocumentParser:
         if not isinstance(directory_path, Path):
             directory_path = Path(directory_path)
 
-        documents: List[DoclingDocument] = []
+        documents: list[DoclingDocument] = []
 
         for filepath in directory_path.glob("*.pdf"):
             try:

@@ -1,5 +1,3 @@
-from typing import List, Tuple
-
 from openai.types.responses.parsed_response import ParsedResponse
 
 from src.generation.generator import Generator
@@ -10,16 +8,16 @@ from src.retrieval.database import UserKnowledgeBase
 # TODO maybe create a class
 def answer_query(
     query: str, db: UserKnowledgeBase, generator: Generator
-) -> Tuple[str, List[str]]:
+) -> tuple[str, list[str]]:
     """
     Answers a user query based on the documents in the Qdrant database.
     """
 
     # str -> embedding -> chunks without tables
-    chunks: List[str] = db.get_related_chunks(query=query)
+    chunks: list[str] = db.get_related_chunks(query=query)
 
     # chunks without tables -> rebuilt chunks
-    rebuilt_chunks: List[str] = process_chunks_after_retrieval(
+    rebuilt_chunks: list[str] = process_chunks_after_retrieval(
         chunks=chunks, user_id=db.user_id
     )
 

@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from fastapi import UploadFile
 from loguru import logger
@@ -20,7 +20,7 @@ class FileUploadModel(BaseModel):
     file: UploadFile
     user_id: str
 
-    filepath: Optional[Union[Path, str]] = None
+    filepath: Optional[Path | str] = None
     parsed_year: Optional[str] = None
     parsed_quarter: Optional[str] = None
     parsed_company: Optional[str] = None

@@ -1,6 +1,5 @@
 import datetime
 import os
-from typing import List, Tuple
 
 import pandas as pd
 from evidently import DataDefinition, Dataset
@@ -30,7 +29,7 @@ def run_evaluation(user_id: str) -> pd.DataFrame:
     questions = full_df["Question"]
 
     # (response, list of chunks)
-    generation_result: List[Tuple[str, List[str]]] = [
+    generation_result: list[tuple[str, list[str]]] = [
         answer_query(query=question, db=db, generator=generator)
         for question in questions
     ]

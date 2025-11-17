@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, List, Literal, Optional, Tuple
+from typing import Annotated, Literal, Optional
 
 from openai.types.responses.parsed_response import ParsedResponse
 from pydantic import BaseModel, Field
@@ -22,7 +22,7 @@ class Intent(str, Enum):
 class RelevantDocumentsModel(BaseModel):
     status: Literal["success", "failure"]
     intent: Optional[Intent] = None
-    needed_periods: Optional[Annotated[List[str], Field(min_length=1)]] = None
+    needed_periods: Optional[Annotated[list[str], Field(min_length=1)]] = None
 
 
 def get_output_parsed_for_relevant_document_extraction(
@@ -47,7 +47,7 @@ def get_output_parsed_for_relevant_document_extraction(
     return response.output_parsed
 
 
-def get_relevant_docs(question: str, user_id: str) -> List[Tuple[str, str]]:
+def get_relevant_docs(question: str, user_id: str) -> list[tuple[str, str]]:
     """
     Vaildates the user query to catch fallbacks like irrelevant question.
     If successful returns a list of pairs of years and quarters needed for answering the question.
@@ -87,7 +87,7 @@ def get_relevant_docs(question: str, user_id: str) -> List[Tuple[str, str]]:
     pass
 
 
-def extract_year_quarter_from_filename(filename: str) -> Optional[Tuple[str, str]]:
+def extract_year_quarter_from_filename(filename: str) -> Optional[tuple[str, str]]:
     """
     Robustly parses a filename like "2022 Q3 MSFT.pdf" into (year, quarter).
     Returns None if the format is incorrect.
@@ -102,7 +102,7 @@ def extract_year_quarter_from_filename(filename: str) -> Optional[Tuple[str, str
     return (parts[0], parts[1])
 
 
-def get_filenames_of_all_user_documents(user_id: str) -> List[str]:
+def get_filenames_of_all_user_documents(user_id: str) -> list[str]:
     """Gets all sorted user document filenames."""
     user_sources_folder = get_user_sources_folder(user_id=user_id)
     paths = list(user_sources_folder.glob("*.pdf"))
@@ -110,11 +110,11 @@ def get_filenames_of_all_user_documents(user_id: str) -> List[str]:
     return [doc.name for doc in paths]
 
 
-def get_metadata_from_all_user_documents(user_id: str) -> List[Tuple[str, str]]:
+def get_metadata_from_all_user_documents(user_id: str) -> list[tuple[str, str]]:
     """Gets metadata from ALL documents, skipping any bad filenames."""
     filenames = get_filenames_of_all_user_documents(user_id=user_id)
 
-    metadata: List[Tuple[str, str]] = []
+    metadata: list[tuple[str, str]] = []
     for filename in filenames:
         data = extract_year_quarter_from_filename(filename=filename)
         metadata.append(data)
@@ -124,7 +124,7 @@ def get_metadata_from_all_user_documents(user_id: str) -> List[Tuple[str, str]]:
 
 def get_metadata_from_most_recent_user_document(
     user_id: str,
-) -> Optional[Tuple[str, str]]:
+) -> Optional[tuple[str, str]]:
     """
     Efficiently gets metadata from ONLY the most recent document.
     """

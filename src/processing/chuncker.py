@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from src.utils.exceptions import ChunkingError
 
@@ -10,7 +10,7 @@ class DocumentChunker:
         strategy: str,
         chunk_size: int,
         overlap: int,
-        separators: Optional[List[str]] = None,
+        separators: Optional[list[str]] = None,
     ):
         self.strategy = strategy
         self.chunk_size = chunk_size
@@ -19,7 +19,7 @@ class DocumentChunker:
         if separators is None:
             self.separators = ["\n\n\n\n", "\n\n", "\n", ". ", " ", ""]
 
-    def chunk_text(self, text: str) -> List[str]:
+    def chunk_text(self, text: str) -> list[str]:
         """Chunk document based on the selected strategy"""
         chunks = None
 
@@ -40,7 +40,7 @@ class DocumentChunker:
 
         return chunks
 
-    def _fixed_chunking(self, text: str) -> List[str]:
+    def _fixed_chunking(self, text: str) -> list[str]:
         """Split text into fixed-size chunks"""
         chunks = []
         for i in range(0, len(text), self.chunk_size):
@@ -48,7 +48,7 @@ class DocumentChunker:
             chunks.append(chunk)
         return chunks
 
-    def _overlapping_chunking(self, text: str) -> List[str]:
+    def _overlapping_chunking(self, text: str) -> list[str]:
         """Split text with overlapping windows"""
         chunks = []
         start = 0
@@ -65,7 +65,7 @@ class DocumentChunker:
 
         return chunks
 
-    def _recursive_character_chunking(self, text: str) -> List[str]:
+    def _recursive_character_chunking(self, text: str) -> list[str]:
         """Recursively split text using different separators"""
 
         def _split_text(text, separators, chunk_size):

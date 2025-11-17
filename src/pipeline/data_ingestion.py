@@ -1,5 +1,3 @@
-from typing import List
-
 from docling_core.types.doc import DoclingDocument
 
 from src.api.models import FileUploadModel
@@ -30,10 +28,10 @@ def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase):
 
     # Processed Text -> Text Chunks
     chunker: DocumentChunker = get_document_chunker()
-    chunks: List[str] = chunker.chunk_text(processed_text)
+    chunks: list[str] = chunker.chunk_text(processed_text)
 
     # Text Chunks -> ChunkPayloads
-    chunk_payloads: List[ChunkPayload] = [
+    chunk_payloads: list[ChunkPayload] = [
         ChunkPayload(
             text=chunk,
             metadata={
