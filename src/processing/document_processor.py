@@ -19,7 +19,11 @@ def process_document_for_chunking(document: DoclingDocument, user_id: str) -> st
     """
     Processes a single document to extract text and extract tables preparing it for chunking.
     """
-    logger.info(f"Preparing document {document.name} for chunking...")
+    logger.info(
+        "Preparing document for chunking.",
+        document_name=document.name,
+        user_id=user_id,
+    )
 
     processed_doc = _extract_tables_from_document(document=document, user_id=user_id)
 
@@ -34,13 +38,19 @@ def process_chunk_after_retrieval(chunk: str, user_id: str) -> str:
     """
     Processes a retrieved text chunk to insert tables back into the text.
     """
-    logger.info(f"Processing a retrieved chunk with length {len(chunk)}...")
-    logger.info(f"\n---\n{chunk}\n---\n")  # TODO probably set level to debug
+    logger.debug(
+        "Processing a retrieved chunk with length {chunk_length}.",
+        chunk_length=len(chunk),
+    )
+    logger.trace(f"Chunk content before table insertion:\n---\n{chunk}\n---")
 
     processed_chunk = _insert_tables_into_chunk(chunk_text=chunk, user_id=user_id)
 
     if not processed_chunk:
-        logger.warning("Inserted tables without errors, but processed chunk is empty.")
+        logger.warning(
+            "Inserted tables without errors, but processed chunk is empty.",
+            user_id=user_id,
+        )
         return ""
     return processed_chunk
 
@@ -49,7 +59,11 @@ def process_chunks_after_retrieval(chunks: list[str], user_id: str) -> list[str]
     """
     Processes retrieved text chunks to insert tables back into the text.
     """
-    logger.info(f"Processing {len(chunks)} retrieved chunks...")
+    logger.info(
+        "Processing {chunk_count} retrieved chunks.",
+        chunk_count=len(chunks),
+        user_id=user_id,
+    )
 
     processed_chunks = [
         process_chunk_after_retrieval(chunk=chunk, user_id=user_id) for chunk in chunks
@@ -62,7 +76,10 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
     Extracts and processes all table items from a document.
     Saves tables as markdown and replaces them with a reference string.
     """
-    logger.info(f"Processing tables in document {document.name}...")
+    logger.info(
+        "Processing tables in document {document_name}...",
+        document_name=document.name,
+    )
 
     table_dir = get_user_tables_folder(user_id=user_id)
     base_file_name = Path(document.name).stem.replace(" ", "_").replace(".", "_")
@@ -85,7 +102,8 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
                 page_num = page_numbers[0]
             else:
                 logger.warning(
-                    f"Could not find page number for a table in {document.name}. Defaulting to -1."
+                    "Could not find page number for a table. Defaulting to -1.",
+                    document_name=document.name,
                 )
 
             table_num_on_page = page_table_counts[page_num]
@@ -96,7 +114,11 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
             try:
                 table_md = item.export_to_markdown(doc=document)
             except Exception as e:
-                logger.error(f"Failed to save table {table_id}: {e}")
+                logger.error(
+                    "Failed to export table to markdown.",
+                    table_id=table_id,
+                    exc_info=True,
+                )
                 raise TableExtractionError(
                     f"Failed to extract table with id: {table_id} from document {document.name}"
                 ) from e
@@ -107,7 +129,12 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
                 with open(table_filepath, "w", encoding="utf-8") as f:
                     f.write(table_md)
             except IOError as e:
-                logger.error(f"Failed to save table {table_id}: {e}")
+                logger.error(
+                    "Failed to save table markdown to file.",
+                    table_id=table_id,
+                    filepath=str(table_filepath),
+                    exc_info=True,
+                )
                 raise FileIOError(
                     f"Failed to save table from document {document.name} with id: {table_id}"
                 ) from e
@@ -115,7 +142,10 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
             reference_string = f"\n\n[TABLE_REFERENCE: {table_id}]\n\n"
             processed_items.append(reference_string)
 
-    logger.info(f"Finished processing {document.name}.")
+    logger.info(
+        "Finished processing document {document_name}.",
+        document_name=document.name,
+    )
     return "\n\n".join(processed_items)
 
 
@@ -142,10 +172,19 @@ def _insert_tables_into_chunk(chunk_text: str, user_id) -> str:
             return f"\n\n{table_md}\n\n"
 
         except FileNotFoundError:
-            logger.critical(f"Table file not found: {table_filepath}")
+            logger.critical(
+                "Table file not found during chunk reconstruction.",
+                table_id=table_id,
+                filepath=str(table_filepath),
+            )
             return f"\n\n[TABLE_NOT_FOUND: {table_id}]\n\n"
-        except IOError as e:
-            logger.error(f"Error reading table file {table_filepath}: {e}")
+        except IOError:
+            logger.error(
+                "Error reading table file during chunk reconstruction.",
+                table_id=table_id,
+                filepath=str(table_filepath),
+                exc_info=True,
+            )
             return f"\n\n[TABLE_READ_ERROR: {table_id}]\n\n"
 
     reconstructed_text = TABLE_REFERENCE_PATTERN.sub(_load_table_content, chunk_text)

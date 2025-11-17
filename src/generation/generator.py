@@ -26,9 +26,15 @@ class Generator:
         """
         Generates a response to a user query using RAG.
         """
-        logger.info("Generating response using OpenAI API.")
-        logger.info(f"User prompt: {prompt}")
-        logger.info(f"System prompt: {self.system_prompt}")
+
+        logger.info(
+            "Generating response from LLM.",
+            model=self.model,
+            prompt_length=len(prompt),
+        )
+
+        logger.debug(f"Full user prompt:\n{prompt}")
+        logger.debug(f"Full system prompt:\n{self.system_prompt}")
 
         response = self.client.responses.parse(
             model=self.model,

@@ -22,12 +22,19 @@ async def save_uploaded_document(model: FileUploadModel):
 
     except IOError as e:
         logger.error(
-            f"Failed to write file {model.file.filename} to {model.filepath}: {e}",
+            "Failed to write file to disk.",
+            filename=model.file.filename,
+            filepath=str(model.filepath),
             exc_info=True,
         )
         raise FileIOError(f"Failed to save uploaded document: {e}") from e
 
-    logger.info(f"Saved file to: {model.filepath}")
+    logger.info(
+        "Saved file to disk.",
+        filepath=str(model.filepath),
+        user_id=model.user_id,
+        filename=model.file.filename,
+    )
 
 
 async def process_document_ingestion(model: FileUploadModel):
@@ -35,18 +42,33 @@ async def process_document_ingestion(model: FileUploadModel):
     Processes the API request after the input as been validated.
     Saves the uploaded document, and triggers the ingestion pipeline.
     """
-
+    logger.info(
+        "Starting document ingestion process.",
+        filename=model.file.filename,
+        user_id=model.user_id,
+    )
     await save_uploaded_document(model=model)
 
     db = get_user_knowledge_base(user_id=model.user_id)
     try:
         ingest_single_document(model=model, db=db)
+        logger.success(
+            "Document ingestion process completed successfully.",
+            filename=model.file.filename,
+            user_id=model.user_id,
+        )
     except Exception as e:
+        logger.error(
+            "Ingestion pipeline failed. Cleaning up saved document.",
+            filename=model.file.filename,
+            user_id=model.user_id,
+            exc_info=True,
+        )
         _cleanup_document(filepath=model.filepath)
         raise e
 
 
-def _cleanup_document(filepath: str):
+def _cleanup_document(filepath: str | Path):
     """
     Delete the document. Used when saved the document, but failed the ingestion.
     """
@@ -54,11 +76,19 @@ def _cleanup_document(filepath: str):
     if filepath and Path(filepath).exists():
         try:
             os.remove(filepath)
-            logger.info(f"Cleaned up failed upload at: {filepath}")
+            logger.info(
+                "Cleaned up failed upload artifact.",
+                filepath=str(filepath),
+            )
         except OSError as oe:
-            logger.error(f"Failed to clean up file {filepath}: {oe}")
+            logger.error(
+                "Failed to clean up file artifact.",
+                filepath=str(filepath),
+                exc_info=True,
+            )
             raise FileIOError(f"Failed to clean up document at {filepath}") from oe
     else:
         logger.warning(
-            f"Attempted to clean up document at {filepath} that does not exist."
+            "Attempted to clean up a document that does not exist.",
+            filepath=str(filepath),
         )
