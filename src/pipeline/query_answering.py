@@ -19,7 +19,9 @@ def answer_query(
     chunks: List[str] = db.get_related_chunks(query=query)
 
     # chunks without tables -> rebuilt chunks
-    rebuilt_chunks: List[str] = process_chunks_after_retrieval(chunks=chunks)
+    rebuilt_chunks: List[str] = process_chunks_after_retrieval(
+        chunks=chunks, user_id=db.user_id
+    )
 
     # (context (rebuilt chunks) + user question -> Generator) + system prompt - > LLM response
     context: str = "\n---\n".join(rebuilt_chunks)

@@ -19,6 +19,12 @@ def get_user_sources_filepath(user_id: str, filename: str) -> Path:
     return get_user_sources_folder(user_id=user_id) / filename
 
 
+def get_user_tables_folder(user_id: str) -> Path:
+    user_data_dir = TABLE_DIR_PATH / user_id
+    user_data_dir.mkdir(parents=True, exist_ok=True)
+    return user_data_dir
+
+
 # chunking
 DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 100

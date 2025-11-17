@@ -29,18 +29,13 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
     try:
         model = FileUploadModel(file=input_file, user_id=input_user_id)
 
-        result: bool = await process_document_ingestion(model=model)
-        if result:
-            return JSONResponse(
-                content={
-                    "filename": model.file.filename,
-                },
-                status_code=200,
-            )
-        else:
-            raise VeFRAException(
-                "No errors were raised, but document ingestion pipeline did not succeed."
-            )
+        await process_document_ingestion(model=model)
+        return JSONResponse(
+            content={
+                "filename": model.file.filename,
+            },
+            status_code=200,
+        )
 
     except VeFRAException as e:  # TODO move to decorator
         raise HTTPException(
@@ -78,7 +73,10 @@ async def generate(user_id: str, query: str):
             status_code=200,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error. {e}")
+        logger.error(f"Error generating response: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error. {e}"
+        ) from e
 
 
 @app.post("/{user_id}/evaluate/")

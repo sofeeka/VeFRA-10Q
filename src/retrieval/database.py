@@ -10,7 +10,7 @@ from qdrant_client.http.models import PointStruct
 
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
-from src.utils.exceptions import DatabaseError
+from src.utils.exceptions import DatabaseError, DataInsertionError, SearchError
 
 
 class ChunkPayload(BaseModel):
@@ -103,7 +103,7 @@ class UserKnowledgeBase:
 
         else:
             logger.error(f"Upsert failed with status: {result.status}")
-            raise DatabaseError(f"Upsert failed with status: {result.status}")
+            raise DataInsertionError(f"Upsert failed with status: {result.status}")
 
     def get_search_results(
         self, query: str, limit: int = DEFAULT_SEARCH_K
@@ -124,11 +124,16 @@ class UserKnowledgeBase:
 
         search_results: List[types.ScoredPoint] = self.client.search(
             collection_name=self.collection_name,
-            query_vector=query_vector,
+            query_vector=(DENSE_DEFAULT, query_vector),
             query_filter=user_filter,
             limit=limit,
             with_payload=True,
         )
+
+        if not search_results:
+            raise SearchError(
+                f"Could not find relevant information for query {query}, for user {self.user_id}"
+            )
 
         return search_results
 

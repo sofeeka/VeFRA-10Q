@@ -7,23 +7,23 @@ from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.utils.config import TABLE_DIR_PATH
+from src.utils.config import get_user_tables_folder
 from src.utils.exceptions import FileIOError, ProcessingError, TableExtractionError
 
 TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
     r"\[TABLE_REFERENCE:\s*([^\]]+)\]"
 )
 
-TABLE_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
-
-def process_document_for_chunking(document: DoclingDocument) -> str:
+def process_document_for_chunking(document: DoclingDocument, user_id: str) -> str:
     """
     Processes a single document to extract text and extract tables preparing it for chunking.
     """
     logger.info(f"Preparing document {document.name} for chunking...")
 
-    processed_doc: str = _extract_tables_from_document(document=document)
+    processed_doc: str = _extract_tables_from_document(
+        document=document, user_id=user_id
+    )
 
     if not processed_doc:
         raise ProcessingError(
@@ -32,61 +32,41 @@ def process_document_for_chunking(document: DoclingDocument) -> str:
     return processed_doc
 
 
-def process_documents_for_chunking(documents: List[DoclingDocument]) -> List[str]:
-    """
-    Processes documents to extract text and extract tables preparing them for chunking.
-    """
-    logger.info(f"Processing {len(documents)} documents for chunking...")
-
-    processed_docs = []
-    for doc in documents:
-        try:
-            processed_doc = process_document_for_chunking(doc)
-            processed_docs.append(processed_doc)
-        except (TableExtractionError, FileIOError, ProcessingError) as e:
-            logger.warning(
-                f"Skipping document {doc.name}, failed to process tables: {e.message}"
-            )
-
-    logger.info(
-        f"Processing complete. Successfully processed {len(processed_docs)}/{len(documents)} documents."
-    )
-    return processed_docs
-
-
-def process_chunk_after_retrieval(chunk: str) -> str:
+def process_chunk_after_retrieval(chunk: str, user_id: str) -> str:
     """
     Processes a retrieved text chunk to insert tables back into the text.
     """
     logger.info(f"Processing a retrieved chunk with length {len(chunk)}...")
     logger.info(f"\n---\n{chunk}\n---\n")  # TODO probably set level to debug
 
-    processed_chunk = _insert_tables_into_chunk(chunk_text=chunk)
+    processed_chunk = _insert_tables_into_chunk(chunk_text=chunk, user_id=user_id)
 
     if not processed_chunk:
         logger.warning("Inserted tables without errors, but processed chunk is empty.")
+        return ""
     return processed_chunk
 
 
-def process_chunks_after_retrieval(chunks: List[str]) -> List[str]:
+def process_chunks_after_retrieval(chunks: List[str], user_id: str) -> List[str]:
     """
     Processes retrieved text chunks to insert tables back into the text.
     """
     logger.info(f"Processing {len(chunks)} retrieved chunks...")
 
-    processed_chunks = [process_chunk_after_retrieval(chunk) for chunk in chunks]
+    processed_chunks = [
+        process_chunk_after_retrieval(chunk=chunk, user_id=user_id) for chunk in chunks
+    ]
     return processed_chunks
 
 
-def _extract_tables_from_document(
-    document: DoclingDocument, table_dir: Path = TABLE_DIR_PATH
-) -> str:
+def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> str:
     """
     Extracts and processes all table items from a document.
     Saves tables as markdown and replaces them with a reference string.
     """
     logger.info(f"Processing tables in document {document.name}...")
 
+    table_dir = get_user_tables_folder(user_id=user_id)
     base_file_name = Path(document.name).stem.replace(" ", "_").replace(".", "_")
 
     page_table_counts = defaultdict(int)
@@ -124,9 +104,7 @@ def _extract_tables_from_document(
                 ) from e
 
             try:
-                table_filepath = (
-                    table_dir / f"{table_id}.md"
-                )  # TODO add user_id to save tables into subfolders
+                table_filepath = table_dir / f"{table_id}.md"
 
                 with open(table_filepath, "w", encoding="utf-8") as f:
                     f.write(table_md)
@@ -143,11 +121,12 @@ def _extract_tables_from_document(
     return "\n\n".join(processed_items)
 
 
-def _insert_tables_into_chunk(chunk_text: str, table_dir: Path = TABLE_DIR_PATH) -> str:
+def _insert_tables_into_chunk(chunk_text: str, user_id) -> str:
     """
     Reconstructs a text chunk by replacing all table references
     with their actual Markdown content from saved files.
     """
+    table_dir = get_user_tables_folder(user_id=user_id)
 
     # nested "replacer" function that re.sub will call for every match
     def _load_table_content(match: re.Match) -> str:

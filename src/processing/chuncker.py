@@ -38,6 +38,8 @@ class DocumentChunker:
         if not chunks:
             raise ChunkingError(f"Failed to chunk text with {len(text)} characters.")
 
+        return chunks
+
     def _fixed_chunking(self, text: str) -> List[str]:
         """Split text into fixed-size chunks"""
         chunks = []

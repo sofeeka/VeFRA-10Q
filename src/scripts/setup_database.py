@@ -8,6 +8,7 @@ from src.utils.dependency import (
     get_dense_embedding_model,
     get_qdrant_collection_manager,
 )
+from src.utils.exceptions import CollectionSetupError
 
 
 def setup_database() -> bool:
@@ -44,8 +45,7 @@ def setup_database() -> bool:
         # sparse_vectors_config=sparse_configs,
     )
 
-    if created:
-        logger.info("Database is set up.")
-    else:
-        raise Exception("Could not set up the database.")  # TODO improve
-    pass
+    if not created:
+        raise CollectionSetupError("Could not set up the database.")
+
+    logger.info("Database is set up.")

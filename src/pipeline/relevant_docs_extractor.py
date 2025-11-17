@@ -8,6 +8,7 @@ from src.generation.generator import Generator
 from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_generator
+from src.utils.exceptions import GenerationError
 
 
 class Intent(str, Enum):
@@ -59,19 +60,20 @@ def get_relevant_docs(question: str, user_id: str) -> List[Tuple[str, str]]:
 
     if output.status != "success":  # == "failure"
         if output.intent == Intent.IRRELEVANT_QUESTION:
-            raise Exception(
+            raise GenerationError(
                 f"This system is designed to assist people with financial analysis. Question {question} is irrelevant."
             )
         elif output.intent == Intent.K_10_FALLBACK:
-            raise Exception(
-                f"10 K FALLBACK triggered for question {question}"
-            )  # TODO maybe process this for 9 months instead of 12 months, or remove this fallback
+            raise GenerationError(f"10 K FALLBACK triggered for question {question}")
+        else:
+            raise
+
+    # TODO add additional validation that if it is success then Intent has to be SPECIFIC_TIME, LATEST_DOCUMENT, or GENERAL_QUESTION.
 
     # at this point status == "success"
-
     match output.intent:
-        # all documents should already be available
         case Intent.SPECIFIC_TIME:
+            # all documents should already be available
             return output.needed_periods
 
         case Intent.LATEST_DOCUMENT:
@@ -79,7 +81,7 @@ def get_relevant_docs(question: str, user_id: str) -> List[Tuple[str, str]]:
 
         case Intent.GENERAL_QUESTION:
             # for now I return all available documents,
-            # but for the future maybe specify that there simply is no filter here
+            # TODO but for the future maybe specify that there simply is no filter here
             return get_filenames_of_all_user_documents(user_id=user_id)
 
     pass

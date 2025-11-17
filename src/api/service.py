@@ -31,7 +31,7 @@ async def save_uploaded_document(model: FileUploadModel):
     logger.info(f"Saved file to: {model.filepath}")
 
 
-async def process_document_ingestion(model: FileUploadModel) -> bool:
+async def process_document_ingestion(model: FileUploadModel):
     """
     Processes the API request after the input as been validated.
     Saves the uploaded document, and triggers the ingestion pipeline.
@@ -40,12 +40,11 @@ async def process_document_ingestion(model: FileUploadModel) -> bool:
     await save_uploaded_document(model=model)
 
     db: UserKnowledgeBase = get_user_knowledge_base(user_id=model.user_id)
-    success = ingest_single_document(model=model, db=db)
-
-    if not success:
+    try:
+        ingest_single_document(model=model, db=db)
+    except Exception as e:
         _cleanup_document(filepath=model.filepath)
-
-    return success
+        raise e
 
 
 def _cleanup_document(filepath: str):
