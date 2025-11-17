@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from src.api.models import FileUploadModel
+from src.data_models.api import FileUploadModel
 from src.pipeline.data_ingestion import ingest_single_document
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.dependency import get_user_knowledge_base

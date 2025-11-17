@@ -1,26 +1,13 @@
-import uuid
-from typing import Any
-
 import qdrant_client.http.models as types
 from loguru import logger
-from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http.models import PointStruct
 
+from src.data_models.retrieval import ChunkPayload
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
 from src.utils.exceptions import DatabaseError, DataInsertionError, SearchError
-
-
-class ChunkPayload(BaseModel):
-    """
-    A Pydantic model for Qdrant payload.
-    """
-
-    text: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
 class UserKnowledgeBase:

@@ -3,9 +3,7 @@ from openai import OpenAI
 from openai.types.responses.parsed_response import ParsedResponse
 from pydantic import BaseModel
 
-
-class ResponseModel(BaseModel):
-    response: str
+from src.data_models.generation import ResponseModel
 
 
 class Generator:

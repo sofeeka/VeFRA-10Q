@@ -1,6 +1,6 @@
 from docling_core.types.doc import DoclingDocument
 
-from src.api.models import FileUploadModel
+from src.data_models.api import FileUploadModel
 from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.processing.document_processor import (

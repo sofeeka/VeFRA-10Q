@@ -1,28 +1,13 @@
-from enum import Enum
-from typing import Annotated, Literal, Optional
+from typing import Optional
 
 from openai.types.responses.parsed_response import ParsedResponse
-from pydantic import BaseModel, Field
 
+from src.data_models.retrieval import Intent, RelevantDocumentsModel
 from src.generation.generator import Generator
 from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_generator
 from src.utils.exceptions import GenerationError
-
-
-class Intent(str, Enum):
-    K_10_FALLBACK = "K_10_FALLBACK"
-    IRRELEVANT_QUESTION = "IRRELEVANT_QUESTION"
-    SPECIFIC_TIME = "SPECIFIC_TIME"
-    GENERAL_QUESTION = "GENERAL_QUESTION"
-    LATEST_DOCUMENT = "LATEST_DOCUMENT"
-
-
-class RelevantDocumentsModel(BaseModel):
-    status: Literal["success", "failure"]
-    intent: Optional[Intent] = None
-    needed_periods: Optional[Annotated[list[str], Field(min_length=1)]] = None
 
 
 def get_output_parsed_for_relevant_document_extraction(
