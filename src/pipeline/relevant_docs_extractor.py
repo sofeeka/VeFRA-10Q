@@ -1,10 +1,12 @@
-from typing import Optional
+import re
 
-from src.data_models.retrieval import Intent, RelevantDocumentsModel
+from src.data_models.retrieval import DocumentMetadata, Intent, RelevantDocumentsModel
 from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_generator
-from src.utils.exceptions import GenerationError
+from src.utils.exceptions import GenerationError, MetadataExtractionError
+
+FILENAME_PATTERN = re.compile(r"(\d{4})[\s_-]+(Q[1-3])", re.IGNORECASE)
 
 
 def get_output_parsed_for_relevant_document_extraction(
@@ -12,7 +14,11 @@ def get_output_parsed_for_relevant_document_extraction(
 ) -> RelevantDocumentsModel:
     """ """
 
-    year, quarter = get_metadata_from_most_recent_user_document(user_id=user_id)
+    try:
+        doc_metadata = get_metadata_from_most_recent_user_document(user_id=user_id)
+        year, quarter = doc_metadata.year, doc_metadata.quarter
+    except MetadataExtractionError:
+        year, quarter = "N/A", "N/A"
 
     prompt = CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT.format(
         year=year,
@@ -29,7 +35,7 @@ def get_output_parsed_for_relevant_document_extraction(
     return response.output_parsed
 
 
-def get_relevant_docs(question: str, user_id: str) -> list[tuple[str, str]]:
+def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata]:
     """
     Vaildates the user query to catch fallbacks like irrelevant question.
     If successful returns a list of pairs of years and quarters needed for answering the question.
@@ -56,7 +62,10 @@ def get_relevant_docs(question: str, user_id: str) -> list[tuple[str, str]]:
     match output.intent:
         case Intent.SPECIFIC_TIME:
             # all documents should already be available
-            return output.needed_periods
+            return [
+                extract_metadata_from_string(filename=period)
+                for period in output.needed_periods
+            ]
 
         case Intent.LATEST_DOCUMENT:
             return get_metadata_from_most_recent_user_document(user_id=user_id)
@@ -69,19 +78,17 @@ def get_relevant_docs(question: str, user_id: str) -> list[tuple[str, str]]:
     pass
 
 
-def extract_year_quarter_from_filename(filename: str) -> Optional[tuple[str, str]]:
+def extract_metadata_from_string(filename: str) -> DocumentMetadata:
     """
-    Robustly parses a filename like "2022 Q3 MSFT.pdf" into (year, quarter).
-    Returns None if the format is incorrect.
+    Parses a filename like "2022 Q3 MSFT.pdf" or plain "2022 Q3" into DocumentMetadata.
+    Raise exception if it is impossible to parse
     """
-    parts = filename.split(" ")
+    match = FILENAME_PATTERN.search(filename)
 
-    if len(parts) < 2:
-        raise Exception(
-            f"Invalid file name {filename}. Could not parse to get metadata."
-        )
+    if not match:
+        raise MetadataExtractionError(f"Could not extract Year/Quarter from {filename}")
 
-    return (parts[0], parts[1])
+    return DocumentMetadata(year=match.group(1), quarter=match.group(2).upper())
 
 
 def get_filenames_of_all_user_documents(user_id: str) -> list[str]:
@@ -92,25 +99,25 @@ def get_filenames_of_all_user_documents(user_id: str) -> list[str]:
     return [doc.name for doc in paths]
 
 
-def get_metadata_from_all_user_documents(user_id: str) -> list[tuple[str, str]]:
+def get_metadata_from_all_user_documents(user_id: str) -> list[DocumentMetadata]:
     """Gets metadata from ALL documents, skipping any bad filenames."""
     filenames = get_filenames_of_all_user_documents(user_id=user_id)
 
     metadata = []
     for filename in filenames:
-        data = extract_year_quarter_from_filename(filename=filename)
-        metadata.append(data)
+        doc_metadata = extract_metadata_from_string(filename=filename)
+        metadata.append(doc_metadata)
 
     return metadata
 
 
 def get_metadata_from_most_recent_user_document(
     user_id: str,
-) -> Optional[tuple[str, str]]:
+) -> DocumentMetadata:
     """
     Efficiently gets metadata from ONLY the most recent document.
     """
     user_sources_folder = get_user_sources_folder(user_id=user_id)
     most_recent_path = max(user_sources_folder.glob("*.pdf"))
 
-    return extract_year_quarter_from_filename(filename=most_recent_path.name)
+    return extract_metadata_from_string(filename=most_recent_path.name)

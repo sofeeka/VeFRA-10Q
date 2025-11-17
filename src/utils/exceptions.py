@@ -95,3 +95,7 @@ class GenerationError(VeFRAException):
     def __init__(self, message: str, details: dict = None):
         # 502 Bad Gateway is appropriate when we depend on an external service that fails.
         super().__init__(message, status_code=502, details=details)
+
+
+class MetadataExtractionError(VeFRAException):
+    """For errors related to extracting metadata from filenames or LLM response."""

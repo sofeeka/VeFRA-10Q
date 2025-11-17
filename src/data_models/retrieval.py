@@ -27,3 +27,12 @@ class ChunkPayload(BaseModel):
     text: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+
+class DocumentMetadata(BaseModel):
+    """
+    A DTO for document metadata, specifically year and quarter.
+    """
+
+    year: str  # YYYY
+    quarter: str  # Q1, Q2, Q3
