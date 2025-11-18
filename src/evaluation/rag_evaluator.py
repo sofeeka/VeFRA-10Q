@@ -62,7 +62,7 @@ def run_evaluation(user_id: str) -> pd.DataFrame:
             ),
             ContextRelevance(
                 "Question",
-                "Context",
+                "Contexts",
                 output_scores=True,
                 method="llm",
                 method_params={"model": EVALUATION_MODEL, "provider": "openai"},
