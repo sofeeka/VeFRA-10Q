@@ -6,7 +6,7 @@ from src.utils.dependency import (
     get_dense_embedding_model,
     get_qdrant_collection_manager,
 )
-from src.utils.exceptions import CollectionSetupError
+from src.utils.exceptions import VeFRA_CollectionSetupError
 
 
 def setup_database() -> bool:
@@ -44,6 +44,6 @@ def setup_database() -> bool:
     )
 
     if not created:
-        raise CollectionSetupError("Could not set up the database.")
+        raise VeFRA_CollectionSetupError("Could not set up the database.")
 
     logger.info("Database is set up.")

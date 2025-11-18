@@ -7,10 +7,10 @@ from pydantic import BaseModel, field_validator, model_validator
 
 from src.utils.config import get_user_sources_filepath
 from src.utils.exceptions import (
-    DataValidationError,
-    FileConflictError,
-    InvalidFileNameError,
-    UnsupportedFileTypeError,
+    VeFRA_DataValidationError,
+    VeFRA_FileConflictError,
+    VeFRA_InvalidFileNameError,
+    VeFRA_UnsupportedFileTypeError,
 )
 
 
@@ -32,10 +32,10 @@ class FileUploadModel(BaseModel):
         """
 
         if not user_id:
-            raise DataValidationError(message="User id is required.")
+            raise VeFRA_DataValidationError(message="User id is required.")
 
         if ".." in user_id or "/" in user_id or "\\" in user_id:
-            raise DataValidationError(
+            raise VeFRA_DataValidationError(
                 message="Invalid user_id format. Contains illegal characters.",
             )
 
@@ -51,15 +51,15 @@ class FileUploadModel(BaseModel):
         """
 
         if not file:
-            raise DataValidationError(message="File is required.")
+            raise VeFRA_DataValidationError(message="File is required.")
 
         filename = file.filename
         if not filename:
-            raise DataValidationError(message="File has no filename.")
+            raise VeFRA_DataValidationError(message="File has no filename.")
 
         # file extension validation
         if not filename.lower().endswith(".pdf"):
-            raise UnsupportedFileTypeError(
+            raise VeFRA_UnsupportedFileTypeError(
                 message="Invalid file type. Only .pdf files are accepted.",
             )
 
@@ -87,7 +87,7 @@ class FileUploadModel(BaseModel):
             logger.warning(
                 f"Invalid filename format for user {self.user_id}: {filename}"
             )
-            raise InvalidFileNameError(
+            raise VeFRA_InvalidFileNameError(
                 message="Invalid filename format. "
                 "Expected 'YYYY QN COMPANY.pdf' (e.g., '2022 Q1 MSFT.pdf').",
             )
@@ -101,7 +101,7 @@ class FileUploadModel(BaseModel):
             logger.warning(
                 f"Filename company '{company}' does not match user_id '{self.user_id}'"
             )
-            raise DataValidationError(
+            raise VeFRA_DataValidationError(
                 message=f"Company name in filename ('{company}') "
                 f"does not match your user ID {self.user_id}",
             )
@@ -117,7 +117,7 @@ class FileUploadModel(BaseModel):
         # file conflict validation
         if permanent_filepath.exists():
             logger.warning(f"File conflict: {permanent_filepath} already exists.")
-            raise FileConflictError(
+            raise VeFRA_FileConflictError(
                 message=f"File '{self.file.filename}' already exists. "
                 "Please rename the file or delete the existing one first.",
             )

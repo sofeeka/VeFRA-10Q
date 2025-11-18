@@ -5,7 +5,7 @@ from docling.exceptions import ConversionError
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.utils.exceptions import DocumentParsingError
+from src.utils.exceptions import VeFRA_DocumentParsingError
 
 
 class DocumentParser:
@@ -25,13 +25,13 @@ class DocumentParser:
             result = self.converter.convert(filepath)
         except ConversionError as e:
             logger.error(f"Failed to parse document at {filepath}: {e}")
-            raise DocumentParsingError(
+            raise VeFRA_DocumentParsingError(
                 f"Failed to parse document at {filepath}: {e}"
             ) from e
 
         document = result.document
         if not document:
-            raise DocumentParsingError(
+            raise VeFRA_DocumentParsingError(
                 f"No parsing errors were raised, but document parsed from {filepath} is empty."
             )
 
@@ -58,7 +58,7 @@ class DocumentParser:
             try:
                 document = self.parse_document(filepath)
                 documents.append(document)
-            except DocumentParsingError as e:
+            except VeFRA_DocumentParsingError as e:
                 logger.warning(
                     f"Skipping file {filepath.name}, failed to parse: {e.message}"
                 )

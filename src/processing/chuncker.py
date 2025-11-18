@@ -1,4 +1,4 @@
-from src.utils.exceptions import ChunkingError
+from src.utils.exceptions import VeFRA_ChunkingError
 
 
 # TODO refactor remove class, make different chunking functions
@@ -31,10 +31,12 @@ class DocumentChunker:
             chunks = self._recursive_character_chunking(text)
 
         else:
-            raise ChunkingError(f"Unknown chunking strategy: {self.strategy}")
+            raise VeFRA_ChunkingError(f"Unknown chunking strategy: {self.strategy}")
 
         if not chunks:
-            raise ChunkingError(f"Failed to chunk text with {len(text)} characters.")
+            raise VeFRA_ChunkingError(
+                f"Failed to chunk text with {len(text)} characters."
+            )
 
         return chunks
 

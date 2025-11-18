@@ -4,7 +4,7 @@ from src.data_models.retrieval import DocumentMetadata, Intent, RelevantDocument
 from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_generator
-from src.utils.exceptions import GenerationError, MetadataExtractionError
+from src.utils.exceptions import VeFRA_GenerationError, VeFRA_MetadataExtractionError
 
 FILENAME_PATTERN = re.compile(r"(\d{4})[\s_-]+(Q[1-3])", re.IGNORECASE)
 
@@ -17,7 +17,7 @@ def get_output_parsed_for_relevant_document_extraction(
     try:
         doc_metadata = get_metadata_from_most_recent_user_document(user_id=user_id)
         year, quarter = doc_metadata.year, doc_metadata.quarter
-    except MetadataExtractionError:
+    except VeFRA_MetadataExtractionError:
         year, quarter = "N/A", "N/A"
 
     prompt = CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT.format(
@@ -48,11 +48,13 @@ def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata]:
 
     if output.status != "success":  # == "failure"
         if output.intent == Intent.IRRELEVANT_QUESTION:
-            raise GenerationError(
+            raise VeFRA_GenerationError(
                 f"This system is designed to assist people with financial analysis. Question {question} is irrelevant."
             )
         elif output.intent == Intent.K_10_FALLBACK:
-            raise GenerationError(f"10 K FALLBACK triggered for question {question}")
+            raise VeFRA_GenerationError(
+                f"10 K FALLBACK triggered for question {question}"
+            )
         else:
             raise
 
@@ -86,7 +88,9 @@ def extract_metadata_from_string(filename: str) -> DocumentMetadata:
     match = FILENAME_PATTERN.search(filename)
 
     if not match:
-        raise MetadataExtractionError(f"Could not extract Year/Quarter from {filename}")
+        raise VeFRA_MetadataExtractionError(
+            f"Could not extract Year/Quarter from {filename}"
+        )
 
     return DocumentMetadata(year=match.group(1), quarter=match.group(2).upper())
 

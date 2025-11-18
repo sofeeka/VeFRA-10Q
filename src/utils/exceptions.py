@@ -14,32 +14,32 @@ class VeFRAException(Exception):
 # --- API & Validation Errors (Client-side issues: 4xx) ---
 
 
-class DataValidationError(VeFRAException):
+class VeFRA_DataValidationError(VeFRAException):
     """For errors in input data validation (e.g., Pydantic models)."""
 
     def __init__(self, message: str, details: dict = None):
         super().__init__(message, status_code=400, details=details)
 
 
-class FileUploadError(VeFRAException):
+class VeFRA_FileUploadError(VeFRAException):
     """Base for file upload related errors."""
 
 
-class InvalidFileNameError(FileUploadError):
+class VeFRA_InvalidFileNameError(VeFRA_FileUploadError):
     """Filename does not match the expected format."""
 
     def __init__(self, message: str, details: dict = None):
         super().__init__(message, status_code=400, details=details)
 
 
-class UnsupportedFileTypeError(FileUploadError):
+class VeFRA_UnsupportedFileTypeError(VeFRA_FileUploadError):
     """File type is not supported (e.g., not a PDF)."""
 
     def __init__(self, message: str, details: dict = None):
         super().__init__(message, status_code=415, details=details)
 
 
-class FileConflictError(FileUploadError):
+class VeFRA_FileConflictError(VeFRA_FileUploadError):
     """File with the same name already exists on the server."""
 
     def __init__(self, message: str, details: dict = None):
@@ -49,47 +49,47 @@ class FileConflictError(FileUploadError):
 # --- Core Logic & External Service Errors (Server-side issues: 5xx) ---
 
 
-class ConfigurationError(VeFRAException):
+class VeFRA_ConfigurationError(VeFRAException):
     """For configuration-related issues, like missing API keys."""
 
 
-class FileIOError(VeFRAException):
+class VeFRA_FileIOError(VeFRAException):
     """For errors related to reading from or writing to the filesystem."""
 
 
-class ProcessingError(VeFRAException):
+class VeFRA_ProcessingError(VeFRAException):
     """Base for errors during the document ingestion pipeline."""
 
 
-class DocumentParsingError(ProcessingError):
+class VeFRA_DocumentParsingError(VeFRA_ProcessingError):
     """Failed to parse a document using Docling."""
 
 
-class TableExtractionError(ProcessingError):
+class VeFRA_TableExtractionError(VeFRA_ProcessingError):
     """Failed to extract or save a table during processing."""
 
 
-class ChunkingError(ProcessingError):
+class VeFRA_ChunkingError(VeFRA_ProcessingError):
     """Failed to chunk a document after processing."""
 
 
-class DatabaseError(VeFRAException):
+class VeFRA_DatabaseError(VeFRAException):
     """Base for errors related to the vector database (Qdrant)."""
 
 
-class CollectionSetupError(DatabaseError):
+class VeFRA_CollectionSetupError(VeFRA_DatabaseError):
     """Failed to create or configure a Qdrant collection."""
 
 
-class DataInsertionError(DatabaseError):
+class VeFRA_DataInsertionError(VeFRA_DatabaseError):
     """Failed to insert data (embeddings) into Qdrant."""
 
 
-class SearchError(DatabaseError):
+class VeFRA_SearchError(VeFRA_DatabaseError):
     """Failed to perform a search query in Qdrant."""
 
 
-class GenerationError(VeFRAException):
+class VeFRA_GenerationError(VeFRAException):
     """For errors related to LLM response generation (e.g., OpenAI API call failed)."""
 
     def __init__(self, message: str, details: dict = None):
@@ -97,5 +97,5 @@ class GenerationError(VeFRAException):
         super().__init__(message, status_code=502, details=details)
 
 
-class MetadataExtractionError(VeFRAException):
+class VeFRA_MetadataExtractionError(VeFRAException):
     """For errors related to extracting metadata from filenames or LLM response."""

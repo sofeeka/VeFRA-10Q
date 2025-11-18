@@ -8,7 +8,11 @@ from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
 from src.utils.config import get_user_tables_folder
-from src.utils.exceptions import FileIOError, ProcessingError, TableExtractionError
+from src.utils.exceptions import (
+    VeFRA_FileIOError,
+    VeFRA_ProcessingError,
+    VeFRA_TableExtractionError,
+)
 
 TABLE_REFERENCE_PATTERN: Final[re.Pattern] = re.compile(
     r"\[TABLE_REFERENCE:\s*([^\]]+)\]"
@@ -28,7 +32,7 @@ def process_document_for_chunking(document: DoclingDocument, user_id: str) -> st
     processed_doc = _extract_tables_from_document(document=document, user_id=user_id)
 
     if not processed_doc:
-        raise ProcessingError(
+        raise VeFRA_ProcessingError(
             f"Tables extracted without errors, but the processed document {document.name} is empty."
         )
     return processed_doc
@@ -119,7 +123,7 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
                     table_id=table_id,
                     exc_info=True,
                 )
-                raise TableExtractionError(
+                raise VeFRA_TableExtractionError(
                     f"Failed to extract table with id: {table_id} from document {document.name}"
                 ) from e
 
@@ -135,7 +139,7 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
                     filepath=str(table_filepath),
                     exc_info=True,
                 )
-                raise FileIOError(
+                raise VeFRA_FileIOError(
                     f"Failed to save table from document {document.name} with id: {table_id}"
                 ) from e
 

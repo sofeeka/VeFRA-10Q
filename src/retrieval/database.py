@@ -7,7 +7,7 @@ from qdrant_client.http.models import PointStruct
 from src.data_models.retrieval import ChunkPayload
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
-from src.utils.exceptions import DatabaseError, DataInsertionError
+from src.utils.exceptions import VeFRA_DatabaseError, VeFRA_DataInsertionError
 
 
 class UserKnowledgeBase:
@@ -56,7 +56,7 @@ class UserKnowledgeBase:
                 expected_count=len(chunks),
                 actual_count=len(dense_embeddings) if dense_embeddings else 0,
             )
-            raise DatabaseError(
+            raise VeFRA_DatabaseError(
                 "Embedding failed or returned mismatched number of embeddings."
             )
 
@@ -87,7 +87,9 @@ class UserKnowledgeBase:
                 status=result.status,
                 operation_id=result.operation_id,
             )
-            raise DataInsertionError(f"Upsert failed with status: {result.status}")
+            raise VeFRA_DataInsertionError(
+                f"Upsert failed with status: {result.status}"
+            )
 
     def get_search_results(
         self, query: str, limit: int = DEFAULT_SEARCH_K

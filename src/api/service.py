@@ -6,7 +6,7 @@ from loguru import logger
 from src.data_models.api import FileUploadModel
 from src.pipeline.data_ingestion import ingest_single_document
 from src.utils.dependency import get_user_knowledge_base
-from src.utils.exceptions import FileIOError
+from src.utils.exceptions import VeFRA_FileIOError
 
 
 async def save_uploaded_document(model: FileUploadModel):
@@ -27,7 +27,7 @@ async def save_uploaded_document(model: FileUploadModel):
             filepath=str(model.filepath),
             exc_info=True,
         )
-        raise FileIOError(f"Failed to save uploaded document: {e}") from e
+        raise VeFRA_FileIOError(f"Failed to save uploaded document: {e}") from e
 
     logger.info(
         "Saved file to disk.",
@@ -86,7 +86,9 @@ def _cleanup_document(filepath: str | Path):
                 filepath=str(filepath),
                 exc_info=True,
             )
-            raise FileIOError(f"Failed to clean up document at {filepath}") from oe
+            raise VeFRA_FileIOError(
+                f"Failed to clean up document at {filepath}"
+            ) from oe
     else:
         logger.warning(
             "Attempted to clean up a document that does not exist.",
