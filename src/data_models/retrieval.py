@@ -1,6 +1,6 @@
 import uuid
 from enum import Enum
-from typing import Annotated, Any, Literal, Optional
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -15,8 +15,8 @@ class Intent(str, Enum):
 
 class RelevantDocumentsModel(BaseModel):
     status: Literal["success", "failure"]
-    intent: Optional[Intent] = None
-    needed_periods: Optional[Annotated[list[str], Field(min_length=1)]] = None
+    intent: Intent | None = None
+    needed_periods: Annotated[list[str], Field(min_length=1)] | None = None
 
 
 class ChunkPayload(BaseModel):

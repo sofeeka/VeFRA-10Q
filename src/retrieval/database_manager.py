@@ -1,4 +1,4 @@
-from typing import Mapping, Optional
+from typing import Mapping
 
 import qdrant_client.http.models as types
 from loguru import logger
@@ -27,10 +27,10 @@ class QdrantCollectionManager:
 
     def recreate_collection(
         self,
-        vectors_config: Optional[
-            types.VectorParams | Mapping[str, types.VectorParams]
-        ] = None,
-        sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
+        vectors_config: types.VectorParams
+        | Mapping[str, types.VectorParams]
+        | None = None,
+        sparse_vectors_config: Mapping[str, types.SparseVectorParams] | None = None,
     ) -> bool:
         """
         Recreate the Qdrant collection with specified vector parameters.
@@ -84,10 +84,10 @@ class QdrantCollectionManager:
 
     def create_collection_if_not_exists(
         self,
-        vectors_config: Optional[
-            types.VectorParams | Mapping[str, types.VectorParams]
-        ] = None,
-        sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
+        vectors_config: types.VectorParams
+        | Mapping[str, types.VectorParams]
+        | None = None,
+        sparse_vectors_config: Mapping[str, types.SparseVectorParams] | None = None,
     ) -> bool:
         """
         A safer method for setup scripts. Ensures the collection and

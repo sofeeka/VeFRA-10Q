@@ -1,5 +1,3 @@
-from typing import Optional
-
 from src.utils.exceptions import ChunkingError
 
 
@@ -10,7 +8,7 @@ class DocumentChunker:
         strategy: str,
         chunk_size: int,
         overlap: int,
-        separators: Optional[list[str]] = None,
+        separators: list[str] | None = None,
     ):
         self.strategy = strategy
         self.chunk_size = chunk_size

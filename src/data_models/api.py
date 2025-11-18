@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-from typing import Optional
 
 from fastapi import UploadFile
 from loguru import logger
@@ -20,10 +19,10 @@ class FileUploadModel(BaseModel):
     file: UploadFile
     user_id: str
 
-    filepath: Optional[Path | str] = None
-    parsed_year: Optional[str] = None
-    parsed_quarter: Optional[str] = None
-    parsed_company: Optional[str] = None
+    filepath: Path | str | None = None
+    parsed_year: str | None = None
+    parsed_quarter: str | None = None
+    parsed_company: str | None = None
 
     @field_validator("user_id", mode="before")
     @classmethod
