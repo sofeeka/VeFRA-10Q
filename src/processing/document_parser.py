@@ -1,10 +1,11 @@
 from pathlib import Path
-from typing import List, Union
 
-from docling.datamodel.document import TableItem, TextItem
 from docling.document_converter import DocumentConverter
+from docling.exceptions import ConversionError
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
+
+from src.utils.exceptions import VeFRA_DocumentParsingError
 
 
 class DocumentParser:
@@ -13,25 +14,36 @@ class DocumentParser:
             converter = DocumentConverter()
         self.converter = converter
 
-    def parse_document(self, file_path: Union[str, Path]) -> DoclingDocument:
+    def parse_document(self, filepath: str | Path) -> DoclingDocument:
         """
         Parses a single document from a given full file path.
         """
-        logger.info(f"Parsing document at: {file_path}...")
+        filepath = Path(filepath)
+        logger.info(f"Parsing document at: {filepath}...")
 
         try:
-            result = self.converter.convert(file_path)
-            document = result.document
-            if not document.name:
-                document.name = Path(file_path).name
-            return document
-        except Exception as e:
-            logger.error(f"Failed to parse document at {file_path}: {e}")
-            raise e
+            result = self.converter.convert(filepath)
+        except ConversionError as e:
+            logger.error(f"Failed to parse document at {filepath}: {e}")
+            raise VeFRA_DocumentParsingError(
+                f"Failed to parse document at {filepath}: {e}"
+            ) from e
+
+        document = result.document
+        if not document:
+            raise VeFRA_DocumentParsingError(
+                f"No parsing errors were raised, but document parsed from {filepath} is empty."
+            )
+
+        if not document.name:
+            document.name = Path(filepath).name
+
+        logger.info(f"Successfully parsed {filepath}.")
+        return document
 
     def parse_documents_in_directory(
-        self, directory_path: Union[str, Path]
-    ) -> List[DoclingDocument]:
+        self, directory_path: str | Path
+    ) -> list[DoclingDocument]:
         """
         Locates and parses all PDF documents in a given directory.
         """
@@ -40,32 +52,18 @@ class DocumentParser:
         if not isinstance(directory_path, Path):
             directory_path = Path(directory_path)
 
-        documents: List[DoclingDocument] = []
+        documents = []
 
-        for file_path in directory_path.glob("*.pdf"):
-            document: DoclingDocument = self.parse_document(file_path)
+        for filepath in directory_path.glob("*.pdf"):
+            try:
+                document = self.parse_document(filepath)
+                documents.append(document)
+            except VeFRA_DocumentParsingError as e:
+                logger.warning(
+                    f"Skipping file {filepath.name}, failed to parse: {e.message}"
+                )
 
-            if document is None:
-                logger.error(f"Could not parse document at {file_path}")
-                continue
-
-            documents.append(document)
-
+        logger.info(
+            f"Parsing complete. Successfully parsed {len(documents)} documents."
+        )
         return documents
-
-    @staticmethod  # TODO move to utils.py
-    def print_items_from_document(document: DoclingDocument):
-        """
-        Utility function to print all text and table items from a document.
-        """
-        logger.info(f"Printing items from document {document.name}...")
-
-        for item, _ in document.iterate_items():
-            if isinstance(item, TableItem):
-                print("--- [TABLE START] ---")
-                print(item.export_to_markdown(doc=document))
-                print("--- [TABLE END] ---")
-            elif isinstance(item, TextItem):
-                print(item.text.strip())
-            else:
-                print(f"Unknown item type: {type(item)}")

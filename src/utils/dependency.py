@@ -9,22 +9,23 @@ from src.generation.prompts import SYSTEM_PROMPT
 from src.processing.chuncker import DocumentChunker
 from src.processing.document_parser import DocumentParser
 from src.retrieval.database import UserKnowledgeBase
-from src.retrieval.embedder import EmbeddingModel, FastEmbedModel
+from src.retrieval.database_manager import QdrantCollectionManager
+from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.api_key_manager import get_openai_api_key
 from src.utils.config import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
     DEFAULT_CHUNKING_STRATEGY,
+    DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_STORAGE_PATH,
-    FAST_EMBED_DEFAULT_EMBEDDING_MODEL,
-    TESTING_OPENAI_MODEL,
+    DENSE_EMBEDDING_MODEL_NAME,
 )
 
 
 @lru_cache()
-def get_embedder() -> EmbeddingModel:
+def get_dense_embedding_model() -> DenseEmbeddingModel:
     logger.info("Caching singleton of embedding model...")
-    return FastEmbedModel(model_name=FAST_EMBED_DEFAULT_EMBEDDING_MODEL)
+    return DenseEmbeddingModel(model_name=DENSE_EMBEDDING_MODEL_NAME)
 
 
 @lru_cache()
@@ -33,19 +34,31 @@ def get_qdrant_client() -> QdrantClient:
     return QdrantClient(path=DEFAULT_QDRANT_STORAGE_PATH)
 
 
-@lru_cache()
+@lru_cache(maxsize=None)
 def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
     logger.info(f"Caching singleton of User Knowledge Base for user {user_id}...")
     return UserKnowledgeBase(
-        user_id=user_id, embedding_model=get_embedder(), client=get_qdrant_client()
+        user_id=user_id,
+        dense_embedding_model=get_dense_embedding_model(),
+        client=get_qdrant_client(),
+        collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
 
 
 @lru_cache()
-def get_generator() -> Generator:
+def get_qdrant_collection_manager() -> QdrantCollectionManager:
+    logger.info("Caching singleton of Qdrant Collection Manager...")
+    return QdrantCollectionManager(
+        client=get_qdrant_client(),
+        collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
+    )
+
+
+@lru_cache()
+def get_generator(model: str) -> Generator:
     logger.info("Caching singleton of Generator...")
     return Generator(
-        model=TESTING_OPENAI_MODEL,
+        model=model,
         system_prompt=SYSTEM_PROMPT,
         client=get_openai_client(),
     )

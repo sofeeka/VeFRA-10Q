@@ -1,4 +1,4 @@
-from typing import List, Optional
+from src.utils.exceptions import VeFRA_ChunkingError
 
 
 # TODO refactor remove class, make different chunking functions
@@ -8,7 +8,7 @@ class DocumentChunker:
         strategy: str,
         chunk_size: int,
         overlap: int,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
     ):
         self.strategy = strategy
         self.chunk_size = chunk_size
@@ -17,22 +17,30 @@ class DocumentChunker:
         if separators is None:
             self.separators = ["\n\n\n\n", "\n\n", "\n", ". ", " ", ""]
 
-    def chunk_text(self, text: str) -> List[str]:
+    def chunk_text(self, text: str) -> list[str]:
         """Chunk document based on the selected strategy"""
+        chunks = None
 
         if self.strategy == "fixed":
-            return self._fixed_chunking(text)
+            chunks = self._fixed_chunking(text)
 
         elif self.strategy == "overlapping":
-            return self._overlapping_chunking(text)
+            chunks = self._overlapping_chunking(text)
 
         elif self.strategy == "recursive":
-            return self._recursive_character_chunking(text)
+            chunks = self._recursive_character_chunking(text)
 
         else:
-            raise ValueError(f"Unknown chunking strategy: {self.strategy}")
+            raise VeFRA_ChunkingError(f"Unknown chunking strategy: {self.strategy}")
 
-    def _fixed_chunking(self, text: str) -> List[str]:
+        if not chunks:
+            raise VeFRA_ChunkingError(
+                f"Failed to chunk text with {len(text)} characters."
+            )
+
+        return chunks
+
+    def _fixed_chunking(self, text: str) -> list[str]:
         """Split text into fixed-size chunks"""
         chunks = []
         for i in range(0, len(text), self.chunk_size):
@@ -40,7 +48,7 @@ class DocumentChunker:
             chunks.append(chunk)
         return chunks
 
-    def _overlapping_chunking(self, text: str) -> List[str]:
+    def _overlapping_chunking(self, text: str) -> list[str]:
         """Split text with overlapping windows"""
         chunks = []
         start = 0
@@ -57,7 +65,7 @@ class DocumentChunker:
 
         return chunks
 
-    def _recursive_character_chunking(self, text: str) -> List[str]:
+    def _recursive_character_chunking(self, text: str) -> list[str]:
         """Recursively split text using different separators"""
 
         def _split_text(text, separators, chunk_size):

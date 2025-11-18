@@ -15,8 +15,14 @@ def get_user_sources_folder(user_id: str) -> Path:
     return user_data_dir
 
 
-def get_user_sources_file_path(user_id: str, filename: str) -> Path:
+def get_user_sources_filepath(user_id: str, filename: str) -> Path:
     return get_user_sources_folder(user_id=user_id) / filename
+
+
+def get_user_tables_folder(user_id: str) -> Path:
+    user_data_dir = TABLE_DIR_PATH / user_id
+    user_data_dir.mkdir(parents=True, exist_ok=True)
+    return user_data_dir
 
 
 # chunking
@@ -26,7 +32,8 @@ DEFAULT_CHUNKING_STRATEGY = "recursive"
 
 # embedding
 # DEFAULT_EMBEDDING_MODEL = "models/text-embedding-004" # google embedding
-FAST_EMBED_DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+DENSE_EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
+DENSE_DEFAULT = "dense_default"
 
 
 # database
@@ -36,4 +43,6 @@ DEFAULT_QDRANT_DISTANCE_METRIC = "Cosine"
 DEFAULT_SEARCH_K = 10
 
 # generation
-TESTING_OPENAI_MODEL = "gpt-5-nano"
+MAIN_RESPONSE_GENERATION_MODEL = "gpt-5-nano"
+CHOOSING_RELEVANT_DOCUMENTS_MODEL = "gpt-4.1-nano"
+EVALUATION_MODEL = "gpt-4.1-nano"

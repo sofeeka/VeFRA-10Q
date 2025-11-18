@@ -1,29 +1,13 @@
-import uuid
-from typing import Any, Dict, List
-
 import qdrant_client.http.models as types
 from loguru import logger
-from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http.models import PointStruct
 
-from src.retrieval.embedder import EmbeddingModel
-from src.utils.config import (
-    DEFAULT_QDRANT_COLLECTION_NAME,
-    DEFAULT_QDRANT_DISTANCE_METRIC,
-    DEFAULT_SEARCH_K,
-)
-
-
-class ChunkPayload(BaseModel):
-    """
-    A Pydantic model for Qdrant payload.
-    """
-
-    text: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+from src.data_models.retrieval import ChunkPayload
+from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
+from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
+from src.utils.exceptions import VeFRA_DatabaseError, VeFRA_DataInsertionError
 
 
 class UserKnowledgeBase:
@@ -31,102 +15,81 @@ class UserKnowledgeBase:
         self,
         user_id: str,
         client: QdrantClient,
-        embedding_model: EmbeddingModel,
-        collection_name: str = DEFAULT_QDRANT_COLLECTION_NAME,
+        dense_embedding_model: DenseEmbeddingModel,
+        collection_name: str,
     ):
-        logger.info(f"Initializing Knowledge Base for user {user_id}...")
-
-        if not user_id:
-            logger.error("No user ID provided to User Knowledge Base.")
-
-        if not embedding_model:
-            logger.error("No embedding model provided to User Knowledge Base.")
-
-        if not client:
-            logger.error("No Qdrant client provided to User Knowledge Base.")
+        if not all([user_id, dense_embedding_model, client]):
+            logger.error(
+                "Missing one or more required arguments for UserKnowledgeBase.",
+                user_id_is_present=bool(user_id),
+                embedding_model_is_present=bool(dense_embedding_model),
+                client_is_present=bool(client),
+            )
+            raise ValueError("user_id, client, and dense_embedding_model are required.")
 
         self.user_id = user_id
         self.client = client
-        self.embedding_model = embedding_model
+        self.dense_embedding_model = dense_embedding_model
         self.collection_name = collection_name
-
-    def recreate_collection(self, vector_params: Any = None) -> bool:
-        """
-        Recreate a Qdrant collection with specified vector parameters.
-        """
-        logger.info(f"Recreating collection '{self.collection_name}'...")
-        # TODO: move to admin or setup script, make params obligatory
-        if vector_params is None:
-            vector_params = {
-                "size": self.embedding_model.dim,
-                "distance": DEFAULT_QDRANT_DISTANCE_METRIC,
-            }
-
-        result: bool = self.client.recreate_collection(
-            collection_name=self.collection_name, vectors_config=vector_params
+        logger.info(
+            "Initialized Knowledge Base for user.",
+            user_id=self.user_id,
+            collection_name=self.collection_name,
         )
 
-        try:
-            self.client.create_payload_index(
-                collection_name=self.collection_name,
-                field_name="user_id",
-                field_schema=types.PayloadSchemaType.KEYWORD,
-                wait=True,
-            )
-            logger.info(
-                f"Created payload index on 'user_id' for collection '{self.collection_name}'"
-            )
-        except Exception as e:
-            logger.error(f"Failed to create payload index: {e}")
-            return False
-
-        return result
-
-    def add_chunks(self, chunks: List[ChunkPayload]) -> bool:
+    def add_chunks(self, chunks: list[ChunkPayload]):
         """
         Embed and add text chunks to the Qdrant collection.
         """
+        if not chunks:
+            logger.warning(
+                "add_chunks called with an empty list of chunks.", user_id=self.user_id
+            )
+            return
 
-        texts_to_embed: List[str] = [chunk.text for chunk in chunks]
-        embeddings: List[List[float]] = self.embedding_model.embed(texts_to_embed)
+        texts_to_embed = [chunk.text for chunk in chunks]
+        dense_embeddings = self.dense_embedding_model.embed(texts_to_embed)
 
-        if not embeddings or len(embeddings) != len(chunks):
+        if not dense_embeddings or len(dense_embeddings) != len(chunks):
             logger.error(
+                "Embedding failed or returned mismatched number of embeddings.",
+                expected_count=len(chunks),
+                actual_count=len(dense_embeddings) if dense_embeddings else 0,
+            )
+            raise VeFRA_DatabaseError(
                 "Embedding failed or returned mismatched number of embeddings."
             )
-            return False
 
-        points: List[PointStruct] = []
-        for i, chunk in enumerate(chunks):
-            payload = chunk.model_dump()
+        points = [
+            PointStruct(
+                id=chunk.id,
+                vector={DENSE_DEFAULT: dense_embeddings[i]},
+                payload={**chunk.model_dump(), "user_id": self.user_id},
+            )
+            for i, chunk in enumerate(chunks)
+        ]
 
-            payload["user_id"] = self.user_id
-            point = PointStruct(id=chunk.id, vector=embeddings[i], payload=payload)
-            points.append(point)
-
-        if not points:
-            logger.error("Embedded data successfully, but found no points to upsert.")
-            return False
-
-        result: types.UpdateResult = self.client.upsert(
-            collection_name=self.collection_name, points=points
+        result = self.client.upsert(
+            collection_name=self.collection_name,
+            points=points,
+            wait=True,
         )
 
-        status: types.UpdateStatus = result.status
-
-        if status == types.UpdateStatus.COMPLETED:
-            logger.info(f"Upsert successful (Operation ID: {result.operation_id})")
-            return True
-
-        elif status == types.UpdateStatus.ACKNOWLEDGED:
-            logger.warning(
-                f"Upsert acknowledged, but processing in background (Operation ID: {result.operation_id})"
+        if result.status == types.UpdateStatus.COMPLETED:
+            logger.success(
+                "Upsert successful.",
+                operation_id=result.operation_id,
+                point_count=len(points),
             )
-            return True
-
         else:
-            logger.error(f"Upsert failed with status: {result.status}")
-            return False
+            logger.error(
+                "Upsert failed.",
+                status=result.status,
+                operation_id=result.operation_id,
+            )
+            raise VeFRA_DataInsertionError(
+                f"Upsert failed with status: {result.status}"
+            )
 
     def get_search_results(
         self, query: str, limit: int = DEFAULT_SEARCH_K
@@ -134,8 +97,13 @@ class UserKnowledgeBase:
         """
         Queries the Qdrant collection for similar chunks based on the input query.
         """
-
-        query_vector: List[float] = self.embedding_model.embed(query)[0]
+        logger.info(
+            "Performing vector search.",
+            query=query,
+            user_id=self.user_id,
+            limit=limit,
+        )
+        query_vector = self.dense_embedding_model.embed(query)[0]
 
         user_filter = types.Filter(
             must=[
@@ -145,29 +113,42 @@ class UserKnowledgeBase:
             ]
         )
 
-        search_results: List[types.ScoredPoint] = self.client.search(
+        search_results = self.client.search(
             collection_name=self.collection_name,
-            query_vector=query_vector,
+            query_vector=(DENSE_DEFAULT, query_vector),
             query_filter=user_filter,
             limit=limit,
             with_payload=True,
         )
 
+        logger.info(
+            "Vector search completed.",
+            found_results=len(search_results),
+        )
+
+        if not search_results:
+            logger.warning(
+                "No relevant information found for query.",
+                query=query,
+                user_id=self.user_id,
+            )
+            return []
+
         return search_results
 
     def get_related_chunks(
         self, query: str, limit: int = DEFAULT_SEARCH_K
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Retrieves text chunks related to the input query.
         """
 
-        results: list[ScoredPoint] = self.get_search_results(query=query, limit=limit)
+        results = self.get_search_results(query=query, limit=limit)
 
         if not results:
             return []
 
-        chunks: List[str] = [
+        chunks = [
             result.payload["text"]
             for result in results
             if result.payload and "text" in result.payload

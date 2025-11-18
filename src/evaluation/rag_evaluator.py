@@ -1,6 +1,5 @@
 import datetime
 import os
-from typing import List, Tuple
 
 import pandas as pd
 from evidently import DataDefinition, Dataset
@@ -8,7 +7,7 @@ from evidently.descriptors import ContextRelevance, CorrectnessLLMEval
 
 from src.pipeline.query_answering import answer_query
 from src.utils.api_key_manager import get_openai_api_key
-from src.utils.config import TESTING_OPENAI_MODEL
+from src.utils.config import EVALUATION_MODEL
 from src.utils.dependency import get_generator, get_user_knowledge_base
 
 os.api_key = openai_api_key = get_openai_api_key()
@@ -16,9 +15,9 @@ small_table_link = "https://docs.google.com/spreadsheets/d/1p2yTtVr-xZSpJy9Ypxgx
 full_table_link = "https://docs.google.com/spreadsheets/d/1CdunoCRKYYMcVc78v8DTfhPZYdkNqRPQRlCJfPN12Fg/export?format=csv&gid=0"
 
 
-def run_evaluation() -> pd.DataFrame:
-    db = get_user_knowledge_base(user_id="msft")
-    generator = get_generator()
+def run_evaluation(user_id: str) -> pd.DataFrame:
+    db = get_user_knowledge_base(user_id=user_id)
+    generator = get_generator(model=EVALUATION_MODEL)
 
     full_df = pd.read_csv(full_table_link)
     full_df.drop(
@@ -30,7 +29,7 @@ def run_evaluation() -> pd.DataFrame:
     questions = full_df["Question"]
 
     # (response, list of chunks)
-    generation_result: List[Tuple[str, List[str]]] = [
+    generation_result: list[tuple[str, list[str]]] = [
         answer_query(query=question, db=db, generator=generator)
         for question in questions
     ]
@@ -47,6 +46,8 @@ def run_evaluation() -> pd.DataFrame:
         }
     )
 
+    # TODO do something so that one incorrectly parsed response does not fail the whole system. maybe evaluate
+    # rows one by one, or maybe there is a setting to retry or pass on generated answers.
     context_based_evals = Dataset.from_pandas(
         eval_df,
         data_definition=DataDefinition(
@@ -57,9 +58,16 @@ def run_evaluation() -> pd.DataFrame:
                 column_name="Response",
                 target_output="Question",
                 provider="openai",
-                model=TESTING_OPENAI_MODEL,
+                model=EVALUATION_MODEL,
             ),
-            ContextRelevance(input="Question", contexts="Contexts"),
+            ContextRelevance(
+                "Question",
+                "Contexts",
+                output_scores=True,
+                method="llm",
+                method_params={"model": EVALUATION_MODEL, "provider": "openai"},
+                aggregation_method="hit",
+            ),
         ],
     )
 
