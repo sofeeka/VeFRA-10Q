@@ -114,6 +114,17 @@ async def generate(user_id: str, query: str):
             },
             status_code=200,
         )
+    except VeFRAException as e:
+        logger.error(
+            "VeFRA EXception caught.",
+            user_id=user_id,
+            query=query,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.message,
+        ) from e
     except Exception as e:
         logger.error(
             "Unhandled exception during response generation.",
@@ -121,7 +132,10 @@ async def generate(user_id: str, query: str):
             query=query,
             exc_info=True,
         )
-        raise HTTPException(status_code=500, detail="Internal server error.") from e
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error.",
+        ) from e
 
 
 @app.post("/{user_id}/evaluate/")
