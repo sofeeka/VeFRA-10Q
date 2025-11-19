@@ -1,10 +1,11 @@
 from functools import cache, lru_cache
 
 from loguru import logger
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from qdrant_client import QdrantClient
 
 from processing.chunking.recursive_chunker import RecursiveChunker
+from src.generation.async_generator import AsyncGenerator
 from src.generation.generator import Generator
 from src.generation.prompts import SYSTEM_PROMPT
 from src.processing.document_parser import DocumentParser
@@ -62,9 +63,25 @@ def get_generator(model: str) -> Generator:
 
 
 @lru_cache
+def get_async_generator(model: str) -> AsyncGenerator:
+    logger.info("Caching singleton of Generator...")
+    return AsyncGenerator(
+        model=model,
+        system_prompt=SYSTEM_PROMPT,
+        client=get_async_openai_client(),
+    )
+
+
+@lru_cache
 def get_openai_client() -> OpenAI:
     logger.info("Caching singleton of OpenAI Client...")
     return OpenAI(api_key=get_openai_api_key())
+
+
+@lru_cache
+def get_async_openai_client() -> OpenAI:
+    logger.info("Caching singleton of OpenAI Client...")
+    return AsyncOpenAI(api_key=get_openai_api_key())
 
 
 @lru_cache
