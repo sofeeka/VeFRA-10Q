@@ -18,9 +18,10 @@ from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import (
     EVALUATION_CONCURRENCY_LIMIT,
     EVALUATION_MODEL,
-    EVALUATION_RESULTS_ROOT_PATH,
     MAIN_RESPONSE_GENERATION_MODEL,
     MSFT_BENCHMARK,
+    NVDA_BENCHMARK,
+    get_user_evaluations_folder,
 )
 from src.utils.dependency import (
     get_async_generator,
@@ -37,7 +38,8 @@ query = "Question"
 def _get_evaluation_session_filepath(user_id: str, timestamp_str: str) -> Path:
     """Generates a unique filepath for an evaluation session."""
     return (
-        EVALUATION_RESULTS_ROOT_PATH / f"eval_session_{user_id}_{timestamp_str}.jsonl"
+        get_user_evaluations_folder(user_id=user_id)
+        / f"eval_session_{user_id}_{timestamp_str}.jsonl"
     )
 
 
@@ -192,7 +194,12 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
 
     eval_metrics = EvaluationMetrics(generator=eval_async_generator)
 
-    full_df = pd.read_csv(MSFT_BENCHMARK)
+    if db.user_id == "msft":
+        benchmark = MSFT_BENCHMARK
+    else:
+        benchmark = NVDA_BENCHMARK
+
+    full_df = pd.read_csv(benchmark)
 
     required_cols = [question_id, query, ground_truth_answer]
     if not all(col in full_df.columns for col in required_cols):
@@ -210,7 +217,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
         )
         for _, row in full_df.iterrows()
     ]
-    logger.info(f"Loaded {len(questions)} evaluation questions from {MSFT_BENCHMARK}.")
+    logger.info(f"Loaded {len(questions)} evaluation questions from {benchmark}.")
 
     # Setup session file for persistence
     current_timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -273,7 +280,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
         logger.info(f"Mean Context Coverage: {mean_context_coverage:.2f}")
 
     final_results_csv_path = (
-        EVALUATION_RESULTS_ROOT_PATH
+        get_user_evaluations_folder(user_id=user_id)
         / f"final_eval_results_{user_id}_{current_timestamp_str}.csv"
     )
     results_df.to_csv(final_results_csv_path, index=False)
