@@ -99,3 +99,7 @@ class VeFRA_GenerationError(VeFRAException):
 
 class VeFRA_MetadataExtractionError(VeFRAException):
     """For errors related to extracting metadata from filenames or LLM response."""
+
+
+class VeFRA_EvaluationError(VeFRAException):
+    """For errors related to evaluating the performance of the system."""
