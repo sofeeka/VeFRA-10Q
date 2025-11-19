@@ -53,6 +53,5 @@ EVALUATION_CONCURRENCY_LIMIT = 10
 EVALUATION_RESULTS_ROOT_PATH = Path(DATA_DIR_PATH, "evaluation_results")
 EVALUATION_RESULTS_ROOT_PATH.mkdir(parents=True, exist_ok=True)
 
-BENCHMARK = DATA_DIR_PATH / "VeFRA_benchmark.csv"  # full
-MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark.csv"  # msft only
-TEST_BENCHMARK = DATA_DIR_PATH / "VeFRA-test.csv"  # small
+MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark.csv"
+NVDA_BENCHMARK = DATA_DIR_PATH / "nvda_benchmark.csv"
