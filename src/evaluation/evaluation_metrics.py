@@ -3,7 +3,7 @@ import asyncio
 from loguru import logger
 
 from src.data_models.evaluation import LLMJudgeScore
-from src.generation.generator import Generator
+from src.generation.async_generator import AsyncGenerator
 from src.generation.prompts import (
     ANSWER_CORRECTNESS_JUDGE_PROMPT,
     CHUNK_RELEVANCE_JUDGE_PROMPT,
@@ -14,7 +14,7 @@ from src.generation.prompts import (
 
 
 class EvaluationMetrics:
-    def __init__(self, generator: Generator):
+    def __init__(self, generator: AsyncGenerator):
         self.generator = generator
 
     async def _call_judge_llm(
@@ -24,8 +24,7 @@ class EvaluationMetrics:
         try:
             prompt = prompt_template.format(**format_kwargs)
             # Use asyncio.to_thread to run sync generator.generate_response in an async context
-            parsed_response = await asyncio.to_thread(
-                self.generator.generate_response,
+            parsed_response = await self.generator.generate_response(
                 prompt=prompt,
                 text_format=LLMJudgeScore,
             )
@@ -70,16 +69,14 @@ class EvaluationMetrics:
     async def evaluate_chunk_relevance(
         self, query: str, retrieved_chunks: list[str]
     ) -> list[LLMJudgeScore]:
-        tasks = []
-        for i, chunk_text in enumerate(retrieved_chunks):
-            tasks.append(
-                self._call_judge_llm(
-                    CHUNK_RELEVANCE_JUDGE_PROMPT,
-                    {"query": query, "chunk_text": chunk_text},
-                )
+        tasks = [
+            self._call_judge_llm(
+                CHUNK_RELEVANCE_JUDGE_PROMPT,
+                {"query": query, "chunk_text": chunk_text},
             )
+            for chunk_text in retrieved_chunks
+        ]
 
-        # Run all chunk evaluations in parallel
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         chunk_scores = []

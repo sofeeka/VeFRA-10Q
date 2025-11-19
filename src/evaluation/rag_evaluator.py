@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 from loguru import logger
+from tqdm.asyncio import tqdm
 
 from src.data_models.evaluation import (
     EvaluationQuestion,
@@ -15,12 +16,17 @@ from src.generation.generator import Generator
 from src.pipeline.query_answering import answer_query
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import (
+    EVALUATION_CONCURRENCY_LIMIT,
     EVALUATION_MODEL,
     EVALUATION_RESULTS_ROOT_PATH,
     MAIN_RESPONSE_GENERATION_MODEL,
     MSFT_BENCHMARK,
 )
-from src.utils.dependency import get_generator, get_user_knowledge_base
+from src.utils.dependency import (
+    get_async_generator,
+    get_generator,
+    get_user_knowledge_base,
+)
 from src.utils.exceptions import VeFRA_EvaluationError, VeFRAException
 
 question_id = "Question Id"
@@ -88,72 +94,65 @@ async def _evaluate_single_question(
         question_id=question_data.question_id,
         query=question_data.query,
         ground_truth_answer=question_data.ground_truth_answer,
-        rag_response="",  # Default empty
-        retrieved_chunks=[],  # Default empty
-        full_context="",  # Default empty
-        evaluation_status="FAILED",  # Assume failure until proven success
+        rag_response="",
+        retrieved_chunks=[],
+        full_context="",
+        evaluation_status="FAILED",
         error_message=None,
     )
 
     try:
-        # RAG execution: Get response and chunks
         rag_response, retrieved_chunks_list = await asyncio.to_thread(
             answer_query, query=question_data.query, db=db, generator=rag_generator
         )
         full_context = "\n---\n".join(retrieved_chunks_list)
 
-        # Update result with RAG output
         current_result.rag_response = rag_response
         current_result.retrieved_chunks = retrieved_chunks_list
         current_result.full_context = full_context
-        current_result.evaluation_status = (
-            "SUCCESS"  # Mark as success for RAG generation step
-        )
+        current_result.evaluation_status = "SUCCESS"
 
-        # Answer Correctness (against ground truth)
-        current_result.answer_correctness = (
-            await eval_metrics.evaluate_answer_correctness(
+        metric_tasks = {
+            "answer_correctness": eval_metrics.evaluate_answer_correctness(
                 query=question_data.query,
                 ground_truth_answer=question_data.ground_truth_answer,
                 rag_response=rag_response,
-            )
-        )
-
-        # Groundedness (response based on context)
-        current_result.groundedness = await eval_metrics.evaluate_groundedness(
-            rag_response=rag_response,
-            full_context=full_context,
-        )
-
-        # Context Coverage (overall context sufficiency)
-        current_result.context_coverage = await eval_metrics.evaluate_context_coverage(
-            query=question_data.query,
-            ground_truth_answer=question_data.ground_truth_answer,
-            full_context=full_context,
-        )
-
-        # Chunk Relevance (per retrieved chunk)
-        current_result.chunk_relevance_scores = (
-            await eval_metrics.evaluate_chunk_relevance(
-                question_data.query,
-                retrieved_chunks_list,
-            )
-        )
-
-        # Financial Numerical Accuracy
-        current_result.numerical_accuracy = (
-            await eval_metrics.evaluate_financial_fact_accuracy(
+            ),
+            "groundedness": eval_metrics.evaluate_groundedness(
+                rag_response=rag_response, full_context=full_context
+            ),
+            "context_coverage": eval_metrics.evaluate_context_coverage(
+                query=question_data.query,
+                ground_truth_answer=question_data.ground_truth_answer,
+                full_context=full_context,
+            ),
+            "chunk_relevance_scores": eval_metrics.evaluate_chunk_relevance(
+                question_data.query, retrieved_chunks_list
+            ),
+            "numerical_accuracy": eval_metrics.evaluate_financial_fact_accuracy(
                 query=question_data.query,
                 ground_truth_answer=question_data.ground_truth_answer,
                 rag_response=rag_response,
-            )
-        )
+            ),
+        }
 
-        logger.info(
-            f"Finished RAG and all metrics for question_id: {question_data.question_id}",
-            status=current_result.evaluation_status,
+        results = await asyncio.gather(*metric_tasks.values(), return_exceptions=True)
+
+        # Map results back
+        results_map = dict(zip(metric_tasks.keys(), results))
+
+        for key, value in results_map.items():
+            if isinstance(value, Exception):
+                error_msg = f"Metric calculation '{key}' failed: {value}"
+                logger.error(error_msg, question_id=question_data.question_id)
+                # We can still proceed, the metric will have a `None` score
+            else:
+                setattr(current_result, key, value)
+
+        current_result.evaluation_status = "SUCCESS"
+        logger.success(
+            f"Finished evaluation for question_id: {question_data.question_id}"
         )
-        return current_result
 
     except asyncio.CancelledError:
         current_result.evaluation_status = "FAILED"
@@ -181,20 +180,22 @@ async def _evaluate_single_question(
 
 
 async def run_evaluation(user_id: str) -> pd.DataFrame:
+    """
+    Runs the full evaluation pipeline concurrently.
+    """
+    logger.info(f"Starting evaluation run for user '{user_id}'.")
+    start_time = datetime.datetime.now()
+
     db = get_user_knowledge_base(user_id=user_id)
-
     rag_generator = get_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
-    eval_generator = get_generator(model=EVALUATION_MODEL)
+    eval_async_generator = get_async_generator(model=EVALUATION_MODEL)
 
-    eval_metrics = EvaluationMetrics(generator=eval_generator)
+    eval_metrics = EvaluationMetrics(generator=eval_async_generator)
 
     full_df = pd.read_csv(MSFT_BENCHMARK)
 
     required_cols = [question_id, query, ground_truth_answer]
     if not all(col in full_df.columns for col in required_cols):
-        logger.error(
-            f"Evaluation dataset must contain columns: {required_cols}. Found: {full_df.columns.tolist()}"
-        )
         raise VeFRA_EvaluationError(
             f"Evaluation dataset must contain columns: {required_cols}. Found: {full_df.columns.tolist()}"
         )
@@ -218,20 +219,40 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
         session_filepath, questions
     )
 
-    for q_data in remaining_questions:
-        result = await _evaluate_single_question(
-            question_data=q_data,
-            db=db,
-            rag_generator=rag_generator,
-            eval_metrics=eval_metrics,
-        )
-        all_results.append(result)
-        _save_single_result(session_filepath, result)  # Save after each question
+    if not remaining_questions:
+        logger.info("No remaining questions to evaluate. Session is already complete.")
+    else:
+        semaphore = asyncio.Semaphore(EVALUATION_CONCURRENCY_LIMIT)
 
-    # Aggregate results into a final DataFrame for analysis
-    results_df = pd.DataFrame(
-        [r.model_dump_json_optimized() for r in all_results]
-    )  # Use custom method for better JSON parsing
+        async def evaluate_and_save(q_data: EvaluationQuestion) -> EvaluationResult:
+            async with semaphore:
+                result = await _evaluate_single_question(
+                    question_data=q_data,
+                    db=db,
+                    rag_generator=rag_generator,
+                    eval_metrics=eval_metrics,
+                )
+                _save_single_result(session_filepath, result)
+                return result
+
+        tasks = [evaluate_and_save(q) for q in remaining_questions]
+
+        logger.info(
+            f"Processing {len(tasks)} questions with concurrency limit {EVALUATION_CONCURRENCY_LIMIT}..."
+        )
+
+        processed_results = await tqdm.gather(*tasks, desc="Evaluating Questions")
+        all_results.extend(processed_results)
+
+    end_time = datetime.datetime.now()
+    duration = end_time - start_time
+    logger.info(f"Evaluation run finished in {duration.total_seconds():.2f} seconds.")
+
+    if not all_results:
+        logger.warning("No results to process. Returning empty DataFrame.")
+        return pd.DataFrame()
+
+    results_df = pd.DataFrame([r.model_dump_json_optimized() for r in all_results])
 
     n_total = len(results_df)
     n_success = results_df[results_df["evaluation_status"] == "SUCCESS"].shape[0]
@@ -256,15 +277,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
         / f"final_eval_results_{user_id}_{current_timestamp_str}.csv"
     )
     results_df.to_csv(final_results_csv_path, index=False)
-    logger.info(f"Final evaluation results (CSV) saved to {final_results_csv_path}")
+    logger.success(f"Final evaluation results (CSV) saved to {final_results_csv_path}")
 
-    final_results_jsonl_path = (
-        EVALUATION_RESULTS_ROOT_PATH
-        / f"final_eval_results_{user_id}_{current_timestamp_str}.jsonl"
-    )
-    with open(final_results_jsonl_path, "w", encoding="utf-8") as f:
-        for r in all_results:
-            f.write(r.model_dump_json() + "\n")
-    logger.info(f"Final evaluation results (JSONL) saved to {final_results_jsonl_path}")
-
+    logger.info(f"Final evaluation results (JSONL) saved to {session_filepath}")
     return results_df

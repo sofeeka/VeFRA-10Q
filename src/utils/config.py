@@ -49,6 +49,7 @@ CHOOSING_RELEVANT_DOCUMENTS_MODEL = "gpt-4.1-nano"
 EVALUATION_MODEL = "gpt-5-nano"
 
 # evaluation
+EVALUATION_CONCURRENCY_LIMIT = 10
 EVALUATION_RESULTS_ROOT_PATH = Path(DATA_DIR_PATH, "evaluation_results")
 EVALUATION_RESULTS_ROOT_PATH.mkdir(parents=True, exist_ok=True)
 
