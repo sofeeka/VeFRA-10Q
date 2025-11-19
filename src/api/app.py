@@ -152,24 +152,26 @@ async def evaluate(user_id: str):
 
         correctness_scores = df["answer_correctness_score"].dropna()
         mean_correctness = (
-            correctness_scores.mean() if not correctness_scores.empty else 0.0
+            correctness_scores.mean() if not correctness_scores.empty else -1.0
         )
 
         groundedness_scores = df["groundedness_score"].dropna()
         mean_groundedness = (
-            groundedness_scores.mean() if not groundedness_scores.empty else 0.0
+            groundedness_scores.mean() if not groundedness_scores.empty else -1.0
         )
 
         context_coverage_scores = df["context_coverage_score"].dropna()
         mean_context_coverage = (
-            context_coverage_scores.mean() if not context_coverage_scores.empty else 0.0
+            context_coverage_scores.mean()
+            if not context_coverage_scores.empty
+            else -1.0
         )
 
         numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
         mean_numerical_accuracy = (
             numerical_accuracy_scores.mean()
             if not numerical_accuracy_scores.empty
-            else 0.0
+            else -1.0
         )
 
         all_chunk_relevance_scores = []
