@@ -75,9 +75,7 @@ def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata]:
         case Intent.GENERAL_QUESTION:
             # for now I return all available documents,
             # TODO but for the future maybe specify that there simply is no filter here
-            return get_filenames_of_all_user_documents(user_id=user_id)
-
-    pass
+            return get_metadata_from_all_user_documents(user_id=user_id)
 
 
 def extract_metadata_from_string(filename: str) -> DocumentMetadata:
