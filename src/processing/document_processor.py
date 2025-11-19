@@ -132,7 +132,7 @@ def _extract_tables_from_document(document: DoclingDocument, user_id: str) -> st
 
                 with open(table_filepath, "w", encoding="utf-8") as f:
                     f.write(table_md)
-            except IOError as e:
+            except OSError as e:
                 logger.error(
                     "Failed to save table markdown to file.",
                     table_id=table_id,
@@ -171,7 +171,7 @@ def _insert_tables_into_chunk(chunk_text: str, user_id) -> str:
         table_filepath = table_dir / f"{table_id}.md"
 
         try:
-            with open(table_filepath, "r", encoding="utf-8") as f:
+            with open(table_filepath, encoding="utf-8") as f:
                 table_md = f.read()
             return f"\n\n{table_md}\n\n"
 
@@ -182,7 +182,7 @@ def _insert_tables_into_chunk(chunk_text: str, user_id) -> str:
                 filepath=str(table_filepath),
             )
             return f"\n\n[TABLE_NOT_FOUND: {table_id}]\n\n"
-        except IOError:
+        except OSError:
             logger.error(
                 "Error reading table file during chunk reconstruction.",
                 table_id=table_id,
