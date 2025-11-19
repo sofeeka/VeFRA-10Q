@@ -29,6 +29,7 @@ def get_user_tables_folder(user_id: str) -> Path:
 DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 100
 DEFAULT_CHUNKING_STRATEGY = "recursive"
+CHUNKING_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # embedding
 # DEFAULT_EMBEDDING_MODEL = "models/text-embedding-004" # google embedding
@@ -45,4 +46,12 @@ DEFAULT_SEARCH_K = 10
 # generation
 MAIN_RESPONSE_GENERATION_MODEL = "gpt-5-nano"
 CHOOSING_RELEVANT_DOCUMENTS_MODEL = "gpt-4.1-nano"
-EVALUATION_MODEL = "gpt-4.1-nano"
+EVALUATION_MODEL = "gpt-5-nano"
+
+# evaluation
+EVALUATION_RESULTS_ROOT_PATH = Path(DATA_DIR_PATH, "evaluation_results")
+EVALUATION_RESULTS_ROOT_PATH.mkdir(parents=True, exist_ok=True)
+
+BENCHMARK = DATA_DIR_PATH / "VeFRA_benchmark.csv"  # full
+MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark.csv"  # msft only
+TEST_BENCHMARK = DATA_DIR_PATH / "VeFRA-test.csv"  # small

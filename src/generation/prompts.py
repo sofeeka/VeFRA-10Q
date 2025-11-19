@@ -69,3 +69,78 @@ Example on success:
 
 Question: {question}
 """
+
+# Answer Correctness against Ground Truth
+ANSWER_CORRECTNESS_JUDGE_PROMPT = """\
+You are an expert financial analyst and an impartial judge. Your task is to evaluate the correctness of a RAG system's response to a user query by comparing it against a ground truth answer.
+
+Here are the details:
+- User Query: {query}
+- Ground Truth Answer: {ground_truth_answer}
+- RAG System's Response: {rag_response}
+
+Evaluate the RAG system's response on its factual accuracy, completeness, and adherence to the ground truth.
+Provide detailed reasoning. Then rate the RAG response on a scale from 0.0 to 1.0, where 0.0 is "Completely Incorrect/Irrelevant" and 1.0 is "Perfectly Correct and Comprehensive".
+
+Output your response in the following JSON format:
+{{"reasoning": "string", "score": float}}
+"""
+
+# Groundedness (LLM Response is based on context)
+GROUNDEDNESS_JUDGE_PROMPT = """\
+You are an expert fact-checker for financial documents. Determine if the RAG system's response is fully supported by the provided context. Any statement not directly inferable or found in the context is a hallucination.
+
+Here are the details:
+- RAG System's Response: {rag_response}
+- Provided Context: {full_context}
+
+Provide detailed reasoning, highlighting any specific ungrounded statements. Then rate the RAG response on a scale from 0.0 to 1.0, where 0.0 is "Contains significant hallucinations or is largely ungrounded" and 1.0 is "Every statement is directly supported by the context".
+
+Output your response in the following JSON format:
+{{"reasoning": "string", "score": float}}
+"""
+
+# Context Coverage (Overall context sufficiency)
+CONTEXT_COVERAGE_JUDGE_PROMPT = """\
+You are an expert financial analyst. Evaluate if the *provided context* contains all necessary information to answer the *user query* according to a *ground truth answer*. You are judging the context's quality, not the RAG response itself.
+
+Here are the details:
+- User Query: {query}
+- Ground Truth Answer: {ground_truth_answer}
+- Provided Context (combined retrieved chunks): {full_context}
+
+Provide detailed reasoning. Then rate the 'Provided Context' on a scale from 0.0 to 1.0, where 0.0 is "Severely lacking information to answer the query" and 1.0 is "Contains all necessary information to construct the ground truth answer".
+
+Output your response in the following JSON format:
+{{"reasoning": "string", "score": float}}
+"""
+
+# Chunk Relevance (Per retrieved chunk)
+CHUNK_RELEVANCE_JUDGE_PROMPT = """\
+You are an expert financial analyst. Assess the relevance of a specific text chunk to a given user query.
+
+Here are the details:
+- User Query: {query}
+- Retrieved Text Chunk: {chunk_text}
+
+Provide brief reasoning. Then rate the chunk's relevance on a scale from 0.0 to 1.0, where 0.0 is "Completely irrelevant" and 1.0 is "Highly relevant and directly useful for answering the query".
+
+Output your response in the following JSON format:
+{{"reasoning": "string", "score": float}}
+"""
+
+# Financial Numerical Accuracy
+FINANCIAL_FACT_ACCURACY_JUDGE_PROMPT = """\
+You are a meticulous financial auditor. Compare numerical values and specific financial facts in a RAG system's response against ground truth.
+
+Here are the details:
+- User Query: {query}
+- Ground Truth Answer (contains specific financial facts/numbers): {ground_truth_answer}
+- RAG System's Response (potential financial facts/numbers): {rag_response}
+
+Identify and compare any financial numbers (e.g., revenues, expenses, net income, percentages, dates) or key financial facts.
+Provide detailed reasoning, specifying any discrepancies. Then rate the numerical and factual accuracy of the RAG response on a scale from 0.0 to 1.0, where 0.0 is "Significant numerical/factual errors or omissions" and 1.0 is "All financial facts and numbers match the ground truth".
+
+Output your response in the following JSON format:
+{{"reasoning": "string", "score": float}}
+"""
