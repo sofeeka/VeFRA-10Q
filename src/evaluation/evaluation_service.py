@@ -13,7 +13,7 @@ from src.generation.prompts import (
 )
 
 
-class EvaluationMetrics:
+class MetricsEvaluator:
     def __init__(self, generator: AsyncGenerator):
         self.generator = generator
 

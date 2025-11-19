@@ -7,11 +7,11 @@ import pandas as pd
 from loguru import logger
 from tqdm.asyncio import tqdm
 
+from evaluation.evaluation_service import MetricsEvaluator
 from src.data_models.evaluation import (
     EvaluationQuestion,
     EvaluationResult,
 )
-from src.evaluation.evaluation_metrics import EvaluationMetrics
 from src.generation.generator import Generator
 from src.pipeline.query_answering import answer_query
 from src.retrieval.database import UserKnowledgeBase
@@ -87,7 +87,7 @@ async def _evaluate_single_question(
     question_data: EvaluationQuestion,
     db: UserKnowledgeBase,
     rag_generator: Generator,
-    eval_metrics: EvaluationMetrics,
+    metrics_evaluator: MetricsEvaluator,
 ) -> EvaluationResult:
     logger.info(f"Starting evaluation for question_id: {question_data.question_id}")
 
@@ -115,23 +115,23 @@ async def _evaluate_single_question(
         current_result.evaluation_status = "SUCCESS"
 
         metric_tasks = {
-            "answer_correctness": eval_metrics.evaluate_answer_correctness(
+            "answer_correctness": metrics_evaluator.evaluate_answer_correctness(
                 query=question_data.query,
                 ground_truth_answer=question_data.ground_truth_answer,
                 rag_response=rag_response,
             ),
-            "groundedness": eval_metrics.evaluate_groundedness(
+            "groundedness": metrics_evaluator.evaluate_groundedness(
                 rag_response=rag_response, full_context=full_context
             ),
-            "context_coverage": eval_metrics.evaluate_context_coverage(
+            "context_coverage": metrics_evaluator.evaluate_context_coverage(
                 query=question_data.query,
                 ground_truth_answer=question_data.ground_truth_answer,
                 full_context=full_context,
             ),
-            "chunk_relevance_scores": eval_metrics.evaluate_chunk_relevance(
+            "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
                 question_data.query, retrieved_chunks_list
             ),
-            "numerical_accuracy": eval_metrics.evaluate_financial_fact_accuracy(
+            "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
                 query=question_data.query,
                 ground_truth_answer=question_data.ground_truth_answer,
                 rag_response=rag_response,
@@ -192,7 +192,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
     rag_generator = get_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
     eval_async_generator = get_async_generator(model=EVALUATION_MODEL)
 
-    eval_metrics = EvaluationMetrics(generator=eval_async_generator)
+    metrics_evaluator = MetricsEvaluator(generator=eval_async_generator)
 
     if db.user_id == "msft":
         benchmark = MSFT_BENCHMARK
@@ -237,7 +237,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
                     question_data=q_data,
                     db=db,
                     rag_generator=rag_generator,
-                    eval_metrics=eval_metrics,
+                    metrics_evaluator=metrics_evaluator,
                 )
                 _save_single_result(session_filepath, result)
                 return result
