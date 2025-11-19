@@ -31,9 +31,9 @@ class LLMJudgeScore(BaseModel):
 
     score: float | None = Field(
         None,
-        ge=1.0,
-        le=5.0,
-        description="Numerical score from 1 to 5, or None if evaluation failed",
+        ge=0.0,
+        le=1.0,
+        description="Numerical score from 0.0 to 1.0, or None if evaluation failed",
     )
     reasoning: str | None = Field(
         None, description="Detailed reasoning for the given score"
