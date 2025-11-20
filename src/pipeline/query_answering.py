@@ -24,12 +24,15 @@ def answer_query(
         logger.info("Extracting relevant document metadata from query.")
         relevant_docs_metadata = get_relevant_docs(question=query, user_id=db.user_id)
 
-        serializable = [doc.model_dump() for doc in relevant_docs_metadata]
-        logger.info("Relevant document metadata extracted.", metadata=serializable)
-
         if not relevant_docs_metadata:
             logger.warning(
                 "No specific documents identified. Searching across all user documents."
+            )
+        else:
+            serializable = [doc.model_dump() for doc in relevant_docs_metadata]
+            logger.info(
+                f"{len(relevant_docs_metadata)} relevant document metadata extracted.",
+                metadata=serializable,
             )
 
     except VeFRA_GenerationError as e:
@@ -53,7 +56,6 @@ def answer_query(
     )
 
     if not chunks:
-        # NEW: More informative message if no chunks are found after filtering
         logger.warning(
             "No chunks found after retrieval, possibly due to document filtering."
         )
