@@ -70,7 +70,7 @@ def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata]:
             ]
 
         case Intent.LATEST_DOCUMENT:
-            return get_metadata_from_most_recent_user_document(user_id=user_id)
+            return [get_metadata_from_most_recent_user_document(user_id=user_id)]
 
         case Intent.GENERAL_QUESTION:
             # for now I return all available documents,
