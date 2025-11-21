@@ -57,12 +57,12 @@ CHOOSING_RELEVANT_DOCUMENTS_MODEL = "gpt-4.1-nano"
 EVALUATION_MODEL = "gpt-5-nano"
 
 # evaluation
-EVALUATION_CONCURRENCY_LIMIT = 10
+EVALUATION_CONCURRENCY_LIMIT = 3
 
 # full
-# MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark.csv"
-# NVDA_BENCHMARK = DATA_DIR_PATH / "nvda_benchmark.csv"
+MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark.csv"
+NVDA_BENCHMARK = DATA_DIR_PATH / "nvda_benchmark.csv"
 
 # small
-MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark_small.csv"
-NVDA_BENCHMARK = DATA_DIR_PATH / "nvda_benchmark_small.csv"
+# MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark_small.csv"
+# NVDA_BENCHMARK = DATA_DIR_PATH / "nvda_benchmark_small.csv"
