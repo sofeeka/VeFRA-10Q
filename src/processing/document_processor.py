@@ -45,6 +45,8 @@ def process_chunk_after_retrieval(chunk: str, user_id: str) -> str:
     logger.debug(
         "Processing a retrieved chunk with length {chunk_length}.",
         chunk_length=len(chunk),
+        user_id=user_id,
+        chunk=chunk,
     )
     logger.trace(f"Chunk content before table insertion:\n---\n{chunk}\n---")
 
