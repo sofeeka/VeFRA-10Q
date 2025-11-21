@@ -19,10 +19,13 @@ Your task is to analyze the user's question and generate a JSON plan.
 
 1.  **First, Check for Failure Cases (Fallbacks):**
     * **K_10_FALLBACK:** Is the question about Q4, a full year (12 months), or an annual total?
-        * **Triggers:** "Q4", "fourth quarter", "three months ended December 31", "12 months ended", "full year", "October", "November", "December".
+        * **Triggers:** "Q4", "fourth quarter", "reporting period ended December 31", "12 months ended", "full year", "October", "November", "December".
+        * **CRITICAL EXCEPTION:** Mentions of the months October, November, December, or January are NOT fallbacks IF and ONLY IF the question clearly references a Q1, Q2, or Q3 filing period (e.g., "Q1 2023 10-Q" "three months ended September 30 2021").
+        * **EXAMPLE:** "According to Microsoft's Q1 2023 10-Q, how much did the company record in employee severance expenses related to the January 2023 workforce reduction announcement?" It is NOT a fallback. If you see this, proceed to Step 2.
         * If YES, you MUST respond with:
             `{{"status": "failure", "intent": "K_10_FALLBACK", "needed_periods": null}}`
-    * **IRRELEVANT_QUESTION:** Is the question irrelevant (e.g., "What's the weather?", "Tell me a joke", "What is someones annual salary?")?
+    * **IRRELEVANT_QUESTION:** Is the question irrelevant
+        * **EXAMPLE:** "What's the weather?" "What is someones annual salary?" It is irrelevant. If you see this, proceed to Step 2.
 * 10-Qs cover financials, risk factors, legal proceedings, and management's discussion.
         * They do **not** cover detailed executive compensation (like a CEO's salary, which is in the Proxy Statement) or non-business-related topics.
         * If YES, you MUST respond with:
