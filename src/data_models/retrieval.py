@@ -23,17 +23,34 @@ class RelevantDocumentsModel(BaseModel):
         """
         Does a final check that the combination of fields and values is valid.
         """
-
         if self.status == "failure":
-            assert self.intent in [Intent.IRRELEVANT_QUESTION, Intent.K_10_FALLBACK]
-            assert not self.needed_periods
+            if self.intent not in [Intent.IRRELEVANT_QUESTION, Intent.K_10_FALLBACK]:
+                raise ValueError(
+                    f"For a 'failure' status, intent must be IRRELEVANT_QUESTION or K_10_FALLBACK, not {self.intent}"
+                )
+            if self.needed_periods:
+                raise ValueError(
+                    f"For a 'failure' status, 'needed_periods' must be null or empty, not {self.needed_periods}"
+                )
 
-        elif self.status == "success" and self.intent == Intent.SPECIFIC_TIME:
-            assert self.needed_periods
+        elif self.status == "success":
+            if self.intent == Intent.SPECIFIC_TIME:
+                if not self.needed_periods:
+                    raise ValueError(
+                        "For a 'success' status with intent SPECIFIC_TIME, 'needed_periods' must be provided."
+                    )
+            elif self.intent in [Intent.GENERAL_QUESTION, Intent.LATEST_DOCUMENT]:
+                if self.needed_periods:
+                    raise ValueError(
+                        f"For a 'success' status with intent {self.intent}, 'needed_periods' must be null or empty."
+                    )
+            else:
+                # This case catches if intent is None or an invalid enum for a success status
+                raise ValueError(
+                    f"Invalid intent '{self.intent}' for a 'success' status."
+                )
 
-        else:
-            assert self.intent in [Intent.GENERAL_QUESTION, Intent.LATEST_DOCUMENT]
-            assert not self.needed_periods
+        return self
 
 
 class ChunkPayload(BaseModel):
