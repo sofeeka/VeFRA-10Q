@@ -10,9 +10,10 @@ USERS_SOURCES_ROOT_FOLDER = Path(DATA_DIR_PATH, "user_sources")
 EVALUATION_DIR_PATH = Path(DATA_DIR_PATH, "evaluation_results")
 
 
-def get_user_sources_folder(user_id: str) -> Path:
+def get_user_sources_folder(user_id: str, create: bool = True) -> Path:
     user_data_dir = USERS_SOURCES_ROOT_FOLDER / user_id
-    user_data_dir.mkdir(parents=True, exist_ok=True)
+    if create:
+        user_data_dir.mkdir(parents=True, exist_ok=True)
     return user_data_dir
 
 

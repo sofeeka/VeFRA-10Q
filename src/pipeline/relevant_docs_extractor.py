@@ -58,8 +58,6 @@ def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata] | N
         else:
             raise
 
-    # TODO add additional validation that if it is success then Intent has to be SPECIFIC_TIME, LATEST_DOCUMENT, or GENERAL_QUESTION.
-
     # at this point status == "success"
     match output.intent:
         case Intent.SPECIFIC_TIME:

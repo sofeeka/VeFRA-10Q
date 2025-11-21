@@ -3,12 +3,13 @@ import json
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+from src.api.input_validation import get_existing_user, validate_user_id
 from src.api.service import process_document_ingestion
 from src.data_models.api import FileUploadModel
 from src.evaluation.rag_evaluator import run_evaluation
@@ -51,7 +52,10 @@ app.add_middleware(LoggingMiddleware)
 
 
 @app.post("/{user_id}/uploadfile/")
-async def create_upload_file(input_user_id: str, input_file: UploadFile = File(...)):
+async def create_upload_file(
+    user_id: str = Depends(validate_user_id),
+    file: UploadFile = File(...),
+):
     """
     Accepts a single PDF file, saves it,
     and triggers the ingestion pipeline.
@@ -59,7 +63,7 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
 
     model = None
     try:
-        model = FileUploadModel(file=input_file, user_id=input_user_id)
+        model = FileUploadModel(file=file, user_id=user_id)
 
         await process_document_ingestion(model=model)
         return JSONResponse(
@@ -87,7 +91,7 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
         filename = model.file.filename if model else "unknown"
         logger.error(
             "Unhandled exception during file upload.",
-            user_id=input_user_id,
+            user_id=user_id,
             filename=filename,
             exc_info=True,
         )
@@ -95,13 +99,13 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
 
 
 @app.post("/{user_id}/generate/")
-async def generate(user_id: str, query: str):
+async def generate(
+    query: str,
+    user_id: str = Depends(get_existing_user),
+):
     """
     Generates the response to user question using user's knowledge base.
     """
-    # TODO create better validation
-    if ".." in user_id or "/" in user_id or "\\" in user_id:
-        raise HTTPException(status_code=400, detail="Invalid user_id format.")
 
     try:
         db = get_user_knowledge_base(user_id=user_id)
@@ -140,7 +144,7 @@ async def generate(user_id: str, query: str):
 
 
 @app.post("/{user_id}/evaluate/")
-async def evaluate(user_id: str):
+async def evaluate(user_id: str = Depends(get_existing_user)):
     """
     Runs the evaluation of the RAG system.
     """

@@ -2,7 +2,7 @@ import uuid
 from enum import Enum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Intent(str, Enum):
@@ -17,6 +17,23 @@ class RelevantDocumentsModel(BaseModel):
     status: Literal["success", "failure"]
     intent: Intent | None = None
     needed_periods: Annotated[list[str], Field(min_length=1)] | None = None
+
+    @model_validator(mode="after")
+    def check_combinations_of_fields(self) -> "RelevantDocumentsModel":
+        """
+        Does a final check that the combination of fields and values is valid.
+        """
+
+        if self.status == "failure":
+            assert self.intent in [Intent.IRRELEVANT_QUESTION, Intent.K_10_FALLBACK]
+            assert not self.needed_periods
+
+        elif self.status == "success" and self.intent == Intent.SPECIFIC_TIME:
+            assert self.needed_periods
+
+        else:
+            assert self.intent in [Intent.GENERAL_QUESTION, Intent.LATEST_DOCUMENT]
+            assert not self.needed_periods
 
 
 class ChunkPayload(BaseModel):

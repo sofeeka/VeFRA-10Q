@@ -14,7 +14,6 @@ from src.utils.exceptions import (
 )
 
 
-# TODO check that user_id exists or at least has uploaded files
 class FileUploadModel(BaseModel):
     file: UploadFile
     user_id: str
@@ -26,20 +25,15 @@ class FileUploadModel(BaseModel):
 
     @field_validator("user_id", mode="before")
     @classmethod
-    def validate_user_id(cls, user_id: str) -> str:
+    def validate_user_id_format(cls, value: str) -> str:
         """
-        Validates the user_id for invalid characters and normalizes it.
+        Validates the format of the user_id.
         """
-
-        if not user_id:
-            raise VeFRA_DataValidationError(message="User id is required.")
-
-        if ".." in user_id or "/" in user_id or "\\" in user_id:
+        if not (2 <= len(value) <= 10):
             raise VeFRA_DataValidationError(
-                message="Invalid user_id format. Contains illegal characters.",
+                message=f"Invalid user_id '{value}'. ID must be between 2 and 10 characters long."
             )
-
-        return user_id.lower()  # TODO change to upper to match the names of the files
+        return value
 
     @field_validator("file", mode="before")
     @classmethod
@@ -50,17 +44,14 @@ class FileUploadModel(BaseModel):
         2. It must have a .pdf extension.
         """
 
-        if not file:
-            raise VeFRA_DataValidationError(message="File is required.")
-
         filename = file.filename
         if not filename:
-            raise VeFRA_DataValidationError(message="File has no filename.")
+            raise VeFRA_DataValidationError("File has no filename.")
 
         # file extension validation
         if not filename.lower().endswith(".pdf"):
             raise VeFRA_UnsupportedFileTypeError(
-                message="Invalid file type. Only .pdf files are accepted.",
+                "Invalid file type. Only .pdf files are accepted.",
             )
 
         return file
@@ -88,7 +79,7 @@ class FileUploadModel(BaseModel):
                 f"Invalid filename format for user {self.user_id}: {filename}"
             )
             raise VeFRA_InvalidFileNameError(
-                message="Invalid filename format. "
+                "Invalid filename format. "
                 "Expected 'YYYY QN COMPANY.pdf' (e.g., '2022 Q1 MSFT.pdf').",
             )
 
@@ -102,7 +93,7 @@ class FileUploadModel(BaseModel):
                 f"Filename company '{company}' does not match user_id '{self.user_id}'"
             )
             raise VeFRA_DataValidationError(
-                message=f"Company name in filename ('{company}') "
+                f"Company name in filename ('{company}') "
                 f"does not match your user ID {self.user_id}",
             )
 
@@ -118,7 +109,7 @@ class FileUploadModel(BaseModel):
         if permanent_filepath.exists():
             logger.warning(f"File conflict: {permanent_filepath} already exists.")
             raise VeFRA_FileConflictError(
-                message=f"File '{self.file.filename}' already exists. "
+                f"File '{self.file.filename}' already exists. "
                 "Please rename the file or delete the existing one first.",
             )
 
