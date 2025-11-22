@@ -209,6 +209,14 @@ async def evaluate(user_id: str = Depends(get_existing_user)):
             },
             status_code=200,
         )
+    except VeFRAException as e:
+        logger.error(
+            "VeFRA Exception caught during evaluation.",
+            e=e,
+            user_id=user_id,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except Exception as e:
         logger.error(
             "Unhandled exception during evaluation.",
