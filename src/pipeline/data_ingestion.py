@@ -1,11 +1,8 @@
 from loguru import logger
 
 from src.data_models.api import FileUploadModel
-from src.processing.document_processor import (
-    process_document_for_chunking,
-)
 from src.retrieval.database import ChunkPayload, UserKnowledgeBase
-from src.utils.dependency import get_document_chunker, get_document_parser
+from src.utils.dependency import get_document_parser, get_recursive_chunker
 
 
 def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase):
@@ -26,17 +23,10 @@ def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase):
     parsed_doc = parser.parse_document(filepath=filepath)
     logger.info("Document parsed successfully.")
 
-    # Docling -> Processed Text
-    logger.info("Processing document for chunking (extracting tables)...")
-    processed_text = process_document_for_chunking(
-        document=parsed_doc, user_id=db.user_id
-    )
-    logger.info("Document processed successfully.")
-
-    # Processed Text -> Text Chunks
-    logger.info("Chunking processed text...")
-    chunker = get_document_chunker()
-    chunks = chunker.chunk_text(processed_text)
+    # Docling -> Chunks
+    logger.info("Chunking parsed document...")
+    chunker = get_recursive_chunker()
+    chunks = chunker.chunk(document=parsed_doc, user_id=db.user_id)
     logger.info("Created {chunk_count} chunks.", chunk_count=len(chunks))
 
     # Text Chunks -> ChunkPayloads

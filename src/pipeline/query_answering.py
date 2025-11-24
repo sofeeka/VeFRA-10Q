@@ -1,11 +1,12 @@
 from loguru import logger
 
 from src.generation.generator import Generator
+from src.pipeline.relevant_docs_extractor import get_relevant_docs
 from src.processing.document_processor import process_chunks_after_retrieval
 from src.retrieval.database import UserKnowledgeBase
+from src.utils.exceptions import VeFRA_GenerationError
 
 
-# TODO maybe create a class
 def answer_query(
     query: str, db: UserKnowledgeBase, generator: Generator
 ) -> tuple[str, list[str]]:
@@ -19,10 +20,49 @@ def answer_query(
         user_id=db.user_id,
     )
 
-    chunks = db.get_related_chunks(query=query)
+    try:
+        logger.info("Extracting relevant document metadata from query.")
+        relevant_docs_metadata = get_relevant_docs(question=query, user_id=db.user_id)
+
+        if not relevant_docs_metadata:
+            logger.warning(
+                "No specific documents identified. Searching across all user documents."
+            )
+        else:
+            serializable = [doc.model_dump() for doc in relevant_docs_metadata]
+            logger.info(
+                f"{len(relevant_docs_metadata)} relevant document metadata extracted.",
+                metadata=serializable,
+            )
+
+    except VeFRA_GenerationError as e:
+        logger.warning(
+            f"Document extraction failed with a generation error: {e.message}"
+        )
+        return e.message, []
+    except Exception:
+        logger.error(
+            "An unexpected error occurred during document metadata extraction. Proceeding without filter."
+        )
+        relevant_docs_metadata = None  # fallback to searching all documents
+
+    chunks = db.get_related_chunks(
+        query=query,
+        doc_metadata_filter=relevant_docs_metadata,
+    )
+
     logger.info(
         "Retrieved {chunk_count} chunks from database.", chunk_count=len(chunks)
     )
+
+    if not chunks:
+        logger.warning(
+            "No chunks found after retrieval, possibly due to document filtering."
+        )
+        return (
+            "I could not find any information relevant to your question. Try to rephrase it and be more specific with dates and years.",
+            [],
+        )
 
     # chunks without tables -> rebuilt chunks
     rebuilt_chunks = process_chunks_after_retrieval(chunks=chunks, user_id=db.user_id)

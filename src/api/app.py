@@ -1,13 +1,15 @@
 import asyncio
+import json
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+from src.api.input_validation import get_existing_user, validate_user_id
 from src.api.service import process_document_ingestion
 from src.data_models.api import FileUploadModel
 from src.evaluation.rag_evaluator import run_evaluation
@@ -50,7 +52,10 @@ app.add_middleware(LoggingMiddleware)
 
 
 @app.post("/{user_id}/uploadfile/")
-async def create_upload_file(input_user_id: str, input_file: UploadFile = File(...)):
+async def create_upload_file(
+    user_id: str = Depends(validate_user_id),
+    file: UploadFile = File(...),
+):
     """
     Accepts a single PDF file, saves it,
     and triggers the ingestion pipeline.
@@ -58,7 +63,7 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
 
     model = None
     try:
-        model = FileUploadModel(file=input_file, user_id=input_user_id)
+        model = FileUploadModel(file=file, user_id=user_id)
 
         await process_document_ingestion(model=model)
         return JSONResponse(
@@ -86,7 +91,7 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
         filename = model.file.filename if model else "unknown"
         logger.error(
             "Unhandled exception during file upload.",
-            user_id=input_user_id,
+            user_id=user_id,
             filename=filename,
             exc_info=True,
         )
@@ -94,13 +99,13 @@ async def create_upload_file(input_user_id: str, input_file: UploadFile = File(.
 
 
 @app.post("/{user_id}/generate/")
-async def generate(user_id: str, query: str):
+async def generate(
+    query: str,
+    user_id: str = Depends(get_existing_user),
+):
     """
     Generates the response to user question using user's knowledge base.
     """
-    # TODO create better validation
-    if ".." in user_id or "/" in user_id or "\\" in user_id:
-        raise HTTPException(status_code=400, detail="Invalid user_id format.")
 
     try:
         db = get_user_knowledge_base(user_id=user_id)
@@ -139,32 +144,83 @@ async def generate(user_id: str, query: str):
 
 
 @app.post("/{user_id}/evaluate/")
-async def evaluate(user_id: str):
+async def evaluate(user_id: str = Depends(get_existing_user)):
     """
     Runs the evaluation of the RAG system.
     """
     try:
-        df = run_evaluation(
-            user_id=user_id
-        )  # TODO mention user_id in the benchmark dataset or create a testing user with all docs for this
-        ranking = round(df["Ranking for Question with Contexts"].mean(), 2)
+        df = await run_evaluation(user_id=user_id)
 
-        n_correct = df["Correctness"].value_counts()["CORRECT"]
-        n_total = df.shape[0]
-        correctness = round(n_correct / n_total, 2)
+        n_total = len(df)
+        n_successful = df[df["evaluation_status"] == "SUCCESS"].shape[0]
+
+        correctness_scores = df["answer_correctness_score"].dropna()
+        mean_correctness = (
+            correctness_scores.mean() if not correctness_scores.empty else -1.0
+        )
+
+        groundedness_scores = df["groundedness_score"].dropna()
+        mean_groundedness = (
+            groundedness_scores.mean() if not groundedness_scores.empty else -1.0
+        )
+
+        context_coverage_scores = df["context_coverage_score"].dropna()
+        mean_context_coverage = (
+            context_coverage_scores.mean()
+            if not context_coverage_scores.empty
+            else -1.0
+        )
+
+        numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
+        mean_numerical_accuracy = (
+            numerical_accuracy_scores.mean()
+            if not numerical_accuracy_scores.empty
+            else -1.0
+        )
+
+        all_chunk_relevance_scores = []
+        for _, row in df.iterrows():
+            if row["chunk_relevance_scores"] and row["evaluation_status"] == "SUCCESS":
+                # chunk_relevance_scores is a JSON string of list of LLMJudgeScore dicts
+                chunk_scores_list = json.loads(row["chunk_relevance_scores"])
+                question_chunk_scores = [
+                    s["score"]
+                    for s in chunk_scores_list
+                    if s and "score" in s and s["score"] is not None
+                ]
+                if question_chunk_scores:
+                    all_chunk_relevance_scores.extend(question_chunk_scores)
+
+        mean_chunk_relevance = (
+            sum(all_chunk_relevance_scores) / len(all_chunk_relevance_scores)
+            if all_chunk_relevance_scores
+            else 0.0
+        )
 
         return JSONResponse(
             content={
-                "mean_ranking": ranking,
-                "correctness": correctness,
-                "n_correct": int(n_correct),
-                "n": int(n_total),
+                "total_questions": n_total,
+                "successful_evaluations": n_successful,
+                "mean_answer_correctness": round(mean_correctness, 2),
+                "mean_groundedness": round(mean_groundedness, 2),
+                "mean_context_coverage": round(mean_context_coverage, 2),
+                "mean_chunk_relevance": round(mean_chunk_relevance, 2),
+                "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
             },
             status_code=200,
         )
+    except VeFRAException as e:
+        logger.error(
+            "VeFRA Exception caught during evaluation.",
+            e=e,
+            user_id=user_id,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except Exception as e:
         logger.error(
             "Unhandled exception during evaluation.",
+            e=e,
             user_id=user_id,
             exc_info=True,
         )

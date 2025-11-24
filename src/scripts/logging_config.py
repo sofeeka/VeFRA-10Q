@@ -24,12 +24,12 @@ def serialize(record):
         # Add context variables to the log record
         "context": record["extra"],
     }
-    # Include exception details if present
+
     if record["exception"]:
         subset["exception"] = {
             "type": record["exception"].type.__name__,
             "value": str(record["exception"].value),
-            "traceback": True,  # Loguru will format the traceback
+            "traceback": True,
         }
     return json.dumps(subset)
 

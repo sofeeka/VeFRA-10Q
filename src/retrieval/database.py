@@ -4,7 +4,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http.models import PointStruct
 
-from src.data_models.retrieval import ChunkPayload
+from src.data_models.retrieval import ChunkPayload, DocumentMetadata
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
 from src.utils.exceptions import VeFRA_DatabaseError, VeFRA_DataInsertionError
@@ -92,7 +92,10 @@ class UserKnowledgeBase:
             )
 
     def get_search_results(
-        self, query: str, limit: int = DEFAULT_SEARCH_K
+        self,
+        query: str,
+        limit: int = DEFAULT_SEARCH_K,
+        doc_metadata_filter: list[DocumentMetadata] | None = None,
     ) -> list[ScoredPoint]:
         """
         Queries the Qdrant collection for similar chunks based on the input query.
@@ -102,16 +105,42 @@ class UserKnowledgeBase:
             query=query,
             user_id=self.user_id,
             limit=limit,
+            metadata_filter=[m.model_dump() for m in doc_metadata_filter]
+            if doc_metadata_filter
+            else "None",
         )
+
         query_vector = self.dense_embedding_model.embed(query)[0]
 
-        user_filter = types.Filter(
-            must=[
+        filter_params = {
+            "must": [
                 types.FieldCondition(
                     key="user_id", match=types.MatchValue(value=self.user_id)
                 )
             ]
-        )
+        }
+
+        if doc_metadata_filter:
+            should_clauses = [
+                types.Filter(
+                    must=[
+                        types.FieldCondition(
+                            key="metadata.year",
+                            match=types.MatchValue(value=doc.year),
+                        ),
+                        types.FieldCondition(
+                            key="metadata.quarter",
+                            match=types.MatchValue(value=doc.quarter),
+                        ),
+                    ]
+                )
+                for doc in doc_metadata_filter
+            ]
+
+            if should_clauses:
+                filter_params["should"] = should_clauses
+
+        user_filter = types.Filter(**filter_params)
 
         search_results = self.client.search(
             collection_name=self.collection_name,
@@ -137,13 +166,20 @@ class UserKnowledgeBase:
         return search_results
 
     def get_related_chunks(
-        self, query: str, limit: int = DEFAULT_SEARCH_K
+        self,
+        query: str,
+        limit: int = DEFAULT_SEARCH_K,
+        doc_metadata_filter: list[DocumentMetadata] | None = None,
     ) -> list[str]:
         """
         Retrieves text chunks related to the input query.
         """
 
-        results = self.get_search_results(query=query, limit=limit)
+        results = self.get_search_results(
+            query=query,
+            limit=limit,
+            doc_metadata_filter=doc_metadata_filter,
+        )
 
         if not results:
             return []

@@ -35,7 +35,7 @@ def get_output_parsed_for_relevant_document_extraction(
     return response.output_parsed
 
 
-def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata]:
+def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata] | None:
     """
     Vaildates the user query to catch fallbacks like irrelevant question.
     If successful returns a list of pairs of years and quarters needed for answering the question.
@@ -58,8 +58,6 @@ def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata]:
         else:
             raise
 
-    # TODO add additional validation that if it is success then Intent has to be SPECIFIC_TIME, LATEST_DOCUMENT, or GENERAL_QUESTION.
-
     # at this point status == "success"
     match output.intent:
         case Intent.SPECIFIC_TIME:
@@ -70,14 +68,10 @@ def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata]:
             ]
 
         case Intent.LATEST_DOCUMENT:
-            return get_metadata_from_most_recent_user_document(user_id=user_id)
+            return [get_metadata_from_most_recent_user_document(user_id=user_id)]
 
         case Intent.GENERAL_QUESTION:
-            # for now I return all available documents,
-            # TODO but for the future maybe specify that there simply is no filter here
-            return get_filenames_of_all_user_documents(user_id=user_id)
-
-    pass
+            return None  # fallback to searching all documents
 
 
 def extract_metadata_from_string(filename: str) -> DocumentMetadata:
@@ -93,26 +87,6 @@ def extract_metadata_from_string(filename: str) -> DocumentMetadata:
         )
 
     return DocumentMetadata(year=match.group(1), quarter=match.group(2).upper())
-
-
-def get_filenames_of_all_user_documents(user_id: str) -> list[str]:
-    """Gets all sorted user document filenames."""
-    user_sources_folder = get_user_sources_folder(user_id=user_id)
-    paths = list(user_sources_folder.glob("*.pdf"))
-    paths.sort()
-    return [doc.name for doc in paths]
-
-
-def get_metadata_from_all_user_documents(user_id: str) -> list[DocumentMetadata]:
-    """Gets metadata from ALL documents, skipping any bad filenames."""
-    filenames = get_filenames_of_all_user_documents(user_id=user_id)
-
-    metadata = []
-    for filename in filenames:
-        doc_metadata = extract_metadata_from_string(filename=filename)
-        metadata.append(doc_metadata)
-
-    return metadata
 
 
 def get_metadata_from_most_recent_user_document(

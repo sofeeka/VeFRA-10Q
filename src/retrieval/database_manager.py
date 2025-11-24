@@ -1,4 +1,4 @@
-from typing import Mapping
+from collections.abc import Mapping
 
 import qdrant_client.http.models as types
 from loguru import logger
