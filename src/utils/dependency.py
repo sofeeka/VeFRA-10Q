@@ -4,6 +4,7 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 from qdrant_client import QdrantClient
 
+from processing.chunking.docling_chunker import DoclingChunker
 from processing.chunking.recursive_chunker import RecursiveChunker
 from src.generation.async_generator import AsyncGenerator
 from src.generation.generator import Generator
@@ -94,3 +95,9 @@ def get_document_parser() -> DocumentParser:
 def get_recursive_chunker() -> RecursiveChunker:
     logger.info("Caching singleton of Recursive Chunker...")
     return RecursiveChunker()
+
+
+@lru_cache
+def get_docling_chunker() -> DoclingChunker:
+    logger.info("Caching singleton of Docling Chunker...")
+    return DoclingChunker()
