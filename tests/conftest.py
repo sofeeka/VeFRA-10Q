@@ -87,12 +87,23 @@ def mock_embedding_model(mocker):
 @pytest.fixture
 def sample_docling_document():
     """Creates a sample DoclingDocument for testing purposes."""
-    doc = DoclingDocument()
+    doc = MagicMock(spec=DoclingDocument)
     doc.name = "sample_doc.pdf"
 
     # Add some text items
-    text_item1 = TextItem(text="This is the first paragraph.")
-    text_item2 = TextItem(text="This is the second paragraph before the table.")
+    text_item1 = TextItem(
+        self_ref="#/texts/1",
+        label="text",
+        orig="This is the first paragraph.",
+        text="This is the first paragraph.",
+    )
+
+    text_item2 = TextItem(
+        self_ref="#/texts/2",
+        label="text",
+        orig="This is the second paragraph before the table.",
+        text="This is the second paragraph before the table.",
+    )
 
     # Add a table item
     table_item = MagicMock(spec=TableItem)
@@ -101,24 +112,22 @@ def sample_docling_document():
         "| Header | Value |\n|---|---|\n| Data | 123 |"
     )
 
-    # Mock get_dataframe for contextualization
+    # Mock export_to_dataframe for contextualization
     import pandas as pd
 
     mock_df = pd.DataFrame({"Header": ["Data", "More Data"], "Value": [123, 456]})
-    table_item.get_dataframe.return_value = mock_df
+    table_item.export_to_dataframe.return_value = mock_df
 
-    text_item3 = TextItem(text="This is text after the table.")
+    text_item3 = TextItem(
+        self_ref="#/texts/3",
+        label="text",
+        orig="This is text after the table.",
+        text="This is text after the table.",
+    )
 
-    # We use a simplified structure here. In reality, you might need a more complex one.
-    doc.structure.children = [text_item1, text_item2, table_item, text_item3]
+    children = [text_item1, text_item2, table_item, text_item3]
 
-    # Patch iterate_items to return our defined items
-    def mock_iterate_items():
-        for item in doc.structure.children:
-            yield item, []
-
-    doc.iterate_items = mock_iterate_items
-
+    doc.iterate_items.return_value = [(item, []) for item in children]
     return doc
 
 
