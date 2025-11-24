@@ -88,7 +88,7 @@ class VeFRATableSerializer(BaseTableSerializer):
         headers_str = ""
         first_col_str = ""
         try:
-            df = item.get_dataframe(doc=doc)
+            df = item.export_to_dataframe(doc=doc)
             if not df.empty:
                 headers = [str(col) for col in df.columns]
                 headers_str = ", ".join(headers)
@@ -108,10 +108,10 @@ class VeFRATableSerializer(BaseTableSerializer):
         if first_col_str:
             context_parts.append(f"First Column Content: {first_col_str}")
 
-        context_str = " | ".join(context_parts)
+        context_str = " \n ".join(context_parts)
         if context_str:
             reference_string = (
-                f"\n\n[TABLE_REFERENCE: {table_id}] \nContexts: {{context_str}}\n\n"
+                f"\n\n[TABLE_REFERENCE: {table_id}] \n\n {context_str}\n\n"
             )
         else:
             reference_string = f"\n\n[TABLE_REFERENCE: {table_id}]\n\n"
