@@ -1,14 +1,16 @@
 from loguru import logger
 
-from src.generation.generator import Generator
+from src.generation.async_generator import AsyncGenerator
 from src.pipeline.relevant_docs_extractor import get_relevant_docs
 from src.processing.document_processor import process_chunk_after_retrieval
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.exceptions import VeFRA_GenerationError
 
 
-def answer_query(
-    query: str, db: UserKnowledgeBase, generator: Generator
+async def answer_query(
+    query: str,
+    db: UserKnowledgeBase,
+    generator: AsyncGenerator,
 ) -> tuple[str, list[str]]:
     """
     Answers a user query based on the documents in the Qdrant database.
@@ -22,7 +24,9 @@ def answer_query(
 
     try:
         logger.info("Extracting relevant document metadata from query.")
-        relevant_docs_metadata = get_relevant_docs(question=query, user_id=db.user_id)
+        relevant_docs_metadata = await get_relevant_docs(
+            question=query, user_id=db.user_id
+        )
 
         if not relevant_docs_metadata:
             logger.warning(
@@ -46,7 +50,7 @@ def answer_query(
         )
         relevant_docs_metadata = None  # fallback to searching all documents
 
-    retrieved_points = db.get_related_chunks(
+    retrieved_points = await db.get_related_chunks(
         query=query,
         doc_metadata_filter=relevant_docs_metadata,
     )
@@ -106,7 +110,7 @@ Content:
     """
 
     try:
-        parsed_response = generator.generate_response(prompt=user_prompt)
+        parsed_response = await generator.generate_response(prompt=user_prompt)
         response = parsed_response.output_parsed.response
         logger.success("Successfully generated and parsed response from LLM.")
         return response, final_rebuilt_chunks

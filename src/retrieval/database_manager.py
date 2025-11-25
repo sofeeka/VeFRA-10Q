@@ -2,7 +2,7 @@ from collections.abc import Mapping
 
 import qdrant_client.http.models as types
 from loguru import logger
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 
 
 # TODO improve error handling
@@ -14,7 +14,7 @@ class QdrantCollectionManager:
 
     def __init__(
         self,
-        client: QdrantClient,
+        client: AsyncQdrantClient,
         collection_name: str,
     ):
         if not client:
@@ -25,7 +25,7 @@ class QdrantCollectionManager:
         self.collection_name = collection_name
         logger.info(f"Initializing QdrantCollectionManager for '{collection_name}'")
 
-    def recreate_collection(
+    async def recreate_collection(
         self,
         vectors_config: types.VectorParams
         | Mapping[str, types.VectorParams]
@@ -37,7 +37,7 @@ class QdrantCollectionManager:
         This is a destructive operation and will wipe all data.
         """
 
-        result = self.client.recreate_collection(
+        result = await self.client.recreate_collection(
             collection_name=self.collection_name,
             vectors_config=vectors_config,
             sparse_vectors_config=sparse_vectors_config,
@@ -47,7 +47,7 @@ class QdrantCollectionManager:
             logger.error(f"Failed to recreate collection '{self.collection_name}'")
             return False
 
-        result = self.create_payload_index(field_name="user_id")
+        result = await self.create_payload_index(field_name="user_id")
 
         if not result:
             logger.error("Failed to create index.")
@@ -57,9 +57,9 @@ class QdrantCollectionManager:
 
         return True
 
-    def create_payload_index(self, field_name: str) -> bool:
+    async def create_payload_index(self, field_name: str) -> bool:
         try:
-            self.client.create_payload_index(
+            await self.client.create_payload_index(
                 collection_name=self.collection_name,
                 field_name=field_name,
                 field_schema=types.PayloadSchemaType.KEYWORD,
@@ -74,15 +74,15 @@ class QdrantCollectionManager:
 
         return True
 
-    def collection_exists(self) -> bool:
+    async def collection_exists(self) -> bool:
         """Checks if the collection already exists."""
         try:
-            self.client.get_collection(self.collection_name)
+            await self.client.get_collection(self.collection_name)
             return True
         except Exception:  # Catches "Not found" and other connection errors
             return False
 
-    def create_collection_if_not_exists(
+    async def create_collection_if_not_exists(
         self,
         vectors_config: types.VectorParams
         | Mapping[str, types.VectorParams]
@@ -101,7 +101,7 @@ class QdrantCollectionManager:
             return True
 
         logger.info(f"Collection '{self.collection_name}' not found. Creating...")
-        return self.recreate_collection(
+        return await self.recreate_collection(
             vectors_config=vectors_config,
             sparse_vectors_config=sparse_vectors_config,
         )

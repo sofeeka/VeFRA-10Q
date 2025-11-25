@@ -2,7 +2,7 @@ from functools import cache, lru_cache
 
 from loguru import logger
 from openai import AsyncOpenAI, OpenAI
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 
 from processing.chunking.docling_chunker import DoclingChunker
 from processing.chunking.recursive_chunker import RecursiveChunker
@@ -28,9 +28,9 @@ def get_dense_embedding_model() -> DenseEmbeddingModel:
 
 
 @lru_cache
-def get_qdrant_client() -> QdrantClient:
-    logger.info("Caching singleton of Qdrant Client...")
-    return QdrantClient(path=DEFAULT_QDRANT_STORAGE_PATH)
+def get_async_qdrant_client() -> AsyncQdrantClient:
+    logger.info("Caching singleton of Async Qdrant Client...")
+    return AsyncQdrantClient(path=DEFAULT_QDRANT_STORAGE_PATH)
 
 
 @cache
@@ -39,7 +39,7 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
     return UserKnowledgeBase(
         user_id=user_id,
         dense_embedding_model=get_dense_embedding_model(),
-        client=get_qdrant_client(),
+        client=get_async_qdrant_client(),
         collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
 
@@ -48,7 +48,7 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
 def get_qdrant_collection_manager() -> QdrantCollectionManager:
     logger.info("Caching singleton of Qdrant Collection Manager...")
     return QdrantCollectionManager(
-        client=get_qdrant_client(),
+        client=get_async_qdrant_client(),
         collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
 
