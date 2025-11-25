@@ -1,10 +1,13 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from src.data_models.api import FileUploadModel
 from src.pipeline.data_ingestion import ingest_single_document
 
 
-def test_ingest_single_document_integration(
+@pytest.mark.asyncio
+async def test_ingest_single_document_integration(
     mocker, mock_user_id, sample_docling_document
 ):
     # mock the dependencies that are outside the scope of this integration test
@@ -22,6 +25,7 @@ def test_ingest_single_document_integration(
 
     mock_db = MagicMock()
     mock_db.user_id = mock_user_id
+    mock_db.add_chunks = mocker.AsyncMock()
 
     # create a fake FileUploadModel
     mock_file_upload = MagicMock(spec=FileUploadModel)
@@ -34,10 +38,10 @@ def test_ingest_single_document_integration(
     mock_file_upload.parsed_year = "2023"
     mock_file_upload.parsed_quarter = "Q1"
 
-    ingest_single_document(model=mock_file_upload, db=mock_db)
+    await ingest_single_document(model=mock_file_upload, db=mock_db)
 
     # check that the final step (adding to DB) was called
-    mock_db.add_chunks.assert_called_once()
+    mock_db.add_chunks.assert_awaited_once()
 
     # check the payload sent to the database
     _, kwargs = mock_db.add_chunks.call_args
