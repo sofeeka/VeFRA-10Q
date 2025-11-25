@@ -20,7 +20,7 @@ async def save_uploaded_document(model: FileUploadModel):
         with open(model.filepath, "wb") as f:
             f.write(uploaded_file_content)
 
-    except IOError as e:
+    except OSError as e:
         logger.error(
             "Failed to write file to disk.",
             filename=model.file.filename,
@@ -51,7 +51,7 @@ async def process_document_ingestion(model: FileUploadModel):
 
     db = get_user_knowledge_base(user_id=model.user_id)
     try:
-        ingest_single_document(model=model, db=db)
+        await ingest_single_document(model=model, db=db)
         logger.success(
             "Document ingestion process completed successfully.",
             filename=model.file.filename,

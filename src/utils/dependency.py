@@ -80,7 +80,7 @@ def get_openai_client() -> OpenAI:
 
 
 @lru_cache
-def get_async_openai_client() -> OpenAI:
+def get_async_openai_client() -> AsyncOpenAI:
     logger.info("Caching singleton of OpenAI Client...")
     return AsyncOpenAI(api_key=get_openai_api_key())
 

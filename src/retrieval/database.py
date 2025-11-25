@@ -1,3 +1,5 @@
+import asyncio
+
 import qdrant_client.http.models as types
 from loguru import logger
 from qdrant_client import AsyncQdrantClient
@@ -46,8 +48,6 @@ class UserKnowledgeBase:
                 "add_chunks called with an empty list of chunks.", user_id=self.user_id
             )
             return
-
-        import asyncio
 
         texts_to_embed = [chunk.text for chunk in chunks]
         dense_embeddings = await asyncio.to_thread(
