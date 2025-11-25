@@ -93,7 +93,7 @@ class QdrantCollectionManager:
         A safer method for setup scripts. Ensures the collection and
         its indexes exist without destroying data.
         """
-        if self.collection_exists():
+        if await self.collection_exists():
             logger.info(
                 f"Collection '{self.collection_name}' already exists. Skipping creation."
             )
