@@ -11,22 +11,24 @@ from docling_core.transforms.chunker.tokenizer.base import BaseTokenizer
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from docling_core.transforms.serializer.base import (
     BaseDocSerializer,
-    BaseTableSerializer,
     SerializationResult,
 )
+from docling_core.transforms.serializer.common import create_ser_result
+from docling_core.transforms.serializer.markdown import MarkdownTableSerializer
 from docling_core.types.doc import DoclingDocument
 from docling_core.types.doc.document import (
     TableItem,
 )
 from loguru import logger
 from transformers import AutoTokenizer
+from typing_extensions import override
 
 from src.processing.chunking.base_chunker import BaseChunker
 from src.utils.config import CHUNKING_EMBEDDING_MODEL, get_user_tables_folder
 from src.utils.exceptions import VeFRA_FileIOError, VeFRA_TableExtractionError
 
 
-class VeFRATableSerializer(BaseTableSerializer):
+class VeFRATableSerializer(MarkdownTableSerializer):
     def __init__(self, user_id: str, document_name: str):
         self.user_id = user_id
         self.document_name = document_name
@@ -36,6 +38,36 @@ class VeFRATableSerializer(BaseTableSerializer):
         )
         self.page_table_counts = defaultdict(int)
 
+    # TODO enrich summary with LLM
+    def _create_table_summary(self, item: TableItem, doc: DoclingDocument) -> str:
+        """
+        Creates a simple, text-based summary of the table for embedding.
+        This linearizes the table content into a readable format.
+        """
+        headers_str = ""
+        first_col_str = ""
+        try:
+            df = item.export_to_dataframe(doc=doc)
+            if not df.empty:
+                headers = [str(col) for col in df.columns]
+                headers_str = ", ".join(headers)
+
+                if len(df.columns) > 0:
+                    first_col_values = df.iloc[:, 0].dropna().astype(str).tolist()
+                    first_col_str = ", ".join(first_col_values[:5])
+        except Exception as e:
+            logger.warning(f"Could not create summary for table: {e}")
+            return "A table with financial data."
+
+        context_parts = []
+        if headers_str:
+            context_parts.append(f"Headers: {headers_str}")
+        if first_col_str:
+            context_parts.append(f"First Column Content: {first_col_str}")
+
+        return ", ".join(context_parts)
+
+    @override
     def serialize(
         self,
         *,
@@ -45,7 +77,7 @@ class VeFRATableSerializer(BaseTableSerializer):
         **kwargs: Any,
     ) -> SerializationResult:
         """Serializes the passed item."""
-        # 1. Generate a unique table ID
+
         page_numbers = sorted(
             set(prov.page_no for prov in item.prov if hasattr(prov, "page_no"))
         )
@@ -56,7 +88,6 @@ class VeFRATableSerializer(BaseTableSerializer):
 
         table_id = f"Table_{self.base_file_name}_p{page_num}_n{table_num_on_page}"
 
-        # 2. Export and save the table
         try:
             table_md = item.export_to_markdown(doc=doc)
         except Exception as e:
@@ -84,39 +115,18 @@ class VeFRATableSerializer(BaseTableSerializer):
                 f"Failed to save table {table_id} from document {self.document_name}"
             ) from e
 
-        # 3. Extract context (headers and first column)
-        headers_str = ""
-        first_col_str = ""
-        try:
-            df = item.export_to_dataframe(doc=doc)
-            if not df.empty:
-                headers = [str(col) for col in df.columns]
-                headers_str = ", ".join(headers)
-
-                if len(df.columns) > 0:
-                    first_col_values = df.iloc[:, 0].dropna().astype(str).tolist()
-                    first_col_str = ", ".join(first_col_values[:5])
-        except Exception as e:
-            logger.warning(
-                f"Could not extract headers/first column for table {table_id}: {e}"
-            )
-
-        # 4. Create the contextualized placeholder
-        context_parts = []
-        if headers_str:
-            context_parts.append(f"Headers: {headers_str}")
-        if first_col_str:
-            context_parts.append(f"First Column Content: {first_col_str}")
-
-        context_str = " \n ".join(context_parts)
-        if context_str:
+        table_summary = self._create_table_summary(doc=doc, item=item)
+        if table_summary:
             reference_string = (
-                f"\n\n[TABLE_REFERENCE: {table_id}] \n\n {context_str}\n\n"
+                f"\n\n[TABLE_REFERENCE: {table_id}] \n"
+                "--- TABLE SUMMARY START ---\n"
+                f"{table_summary}"
+                "--- TABLE SUMMARY END ---\n\n"
             )
         else:
             reference_string = f"\n\n[TABLE_REFERENCE: {table_id}]\n\n"
 
-        return SerializationResult(text=reference_string)
+        return create_ser_result(text=reference_string, span_source=item)
 
 
 class VeFRATableSerializerProvider(ChunkingSerializerProvider):
@@ -148,5 +158,10 @@ class DoclingChunker(BaseChunker):
 
         chunk_iter = chunker.chunk(dl_doc=document)
         chunks = [chunk.text for chunk in chunk_iter]
+
+        logger.info(f"Chunked document {document.name} into {len(chunks)} chunks.")
+
+        for i, chunk in enumerate(chunks):
+            logger.debug(f"Chunk {i}: {chunk}")
 
         return chunks

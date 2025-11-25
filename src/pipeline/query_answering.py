@@ -2,7 +2,7 @@ from loguru import logger
 
 from src.generation.generator import Generator
 from src.pipeline.relevant_docs_extractor import get_relevant_docs
-from src.processing.document_processor import process_chunks_after_retrieval
+from src.processing.document_processor import process_chunk_after_retrieval
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.exceptions import VeFRA_GenerationError
 
@@ -46,29 +46,54 @@ def answer_query(
         )
         relevant_docs_metadata = None  # fallback to searching all documents
 
-    chunks = db.get_related_chunks(
+    retrieved_points = db.get_related_chunks(
         query=query,
         doc_metadata_filter=relevant_docs_metadata,
     )
 
     logger.info(
-        "Retrieved {chunk_count} chunks from database.", chunk_count=len(chunks)
+        "Retrieved {chunk_count} chunks from database.",
+        chunk_count=len(retrieved_points),
     )
 
-    if not chunks:
+    if not retrieved_points:
         logger.warning(
-            "No chunks found after retrieval, possibly due to document filtering."
+            "No chunks found after retrieval, possibly due to document filtering.",
+            relevant_docs_metadata=relevant_docs_metadata,
         )
         return (
             "I could not find any information relevant to your question. Try to rephrase it and be more specific with dates and years.",
             [],
         )
 
-    # chunks without tables -> rebuilt chunks
-    rebuilt_chunks = process_chunks_after_retrieval(chunks=chunks, user_id=db.user_id)
+    #
+    context_parts = []
+    final_rebuilt_chunks = []
+
+    for i, point in enumerate(retrieved_points):
+        payload = point.payload
+        raw_chunk_text = payload.get("text", "")
+        metadata = payload.get("metadata", {})
+        year = metadata.get("year", "N/A")
+        quarter = metadata.get("quarter", "N/A")
+
+        rebuilt_chunk = process_chunk_after_retrieval(
+            chunk=raw_chunk_text,
+            user_id=db.user_id,
+        )
+        final_rebuilt_chunks.append(rebuilt_chunk)
+        context_block = f"""
+--- START OF CONTEXT CHUNK {i + 1} ---
+Source Document: {year} {quarter}
+
+Content:
+{rebuilt_chunk}
+--- END OF CONTEXT CHUNK {i + 1} ---
+"""
+        context_parts.append(context_block)
 
     # (context (rebuilt chunks) + user question -> Generator) + system prompt - > LLM response
-    context: str = "\n---\n".join(rebuilt_chunks)
+    context: str = "\n---\n".join(context_parts)
 
     logger.info("Constructed final context for LLM.", context_length=len(context))
 
@@ -84,7 +109,7 @@ def answer_query(
         parsed_response = generator.generate_response(prompt=user_prompt)
         response = parsed_response.output_parsed.response
         logger.success("Successfully generated and parsed response from LLM.")
-        return response, rebuilt_chunks
+        return response, final_rebuilt_chunks
     except Exception:
         logger.error(
             "Failed to generate or parse response from LLM.",

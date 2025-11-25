@@ -26,6 +26,7 @@ Your task is to analyze the user's question and generate a JSON plan.
             `{{"status": "failure", "intent": "K_10_FALLBACK", "needed_periods": null}}`
     * **IRRELEVANT_QUESTION:** Is the question irrelevant
         * **EXAMPLE:** "What's the weather?" "What is someones annual salary?" It is irrelevant. If you see this, proceed to Step 2.
+        * **CRITICAL EXCEPTION:** Questions about "dividends" or "dividents per share" or "dividents per share declared" or other financial information are NOT irrelevant. If you see this, proceed to Step 2.
 * 10-Qs cover financials, risk factors, legal proceedings, and management's discussion.
         * They do **not** cover detailed executive compensation (like a CEO's salary, which is in the Proxy Statement) or non-business-related topics.
         * If YES, you MUST respond with:

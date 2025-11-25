@@ -170,7 +170,7 @@ class UserKnowledgeBase:
         query: str,
         limit: int = DEFAULT_SEARCH_K,
         doc_metadata_filter: list[DocumentMetadata] | None = None,
-    ) -> list[str]:
+    ) -> list[ScoredPoint]:
         """
         Retrieves text chunks related to the input query.
         """
@@ -184,10 +184,4 @@ class UserKnowledgeBase:
         if not results:
             return []
 
-        chunks = [
-            result.payload["text"]
-            for result in results
-            if result.payload and "text" in result.payload
-        ]
-
-        return chunks
+        return results
