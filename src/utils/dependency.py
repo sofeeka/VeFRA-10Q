@@ -13,11 +13,13 @@ from src.processing.document_parser import DocumentParser
 from src.retrieval.database import UserKnowledgeBase
 from src.retrieval.database_manager import QdrantCollectionManager
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
+from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
 from src.utils.api_key_manager import get_openai_api_key
 from src.utils.config import (
     DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_STORAGE_PATH,
     DENSE_EMBEDDING_MODEL_NAME,
+    SPARSE_EMBEDDING_MODEL_NAME,
 )
 
 
@@ -25,6 +27,12 @@ from src.utils.config import (
 def get_dense_embedding_model() -> DenseEmbeddingModel:
     logger.info("Caching singleton of embedding model...")
     return DenseEmbeddingModel(model_name=DENSE_EMBEDDING_MODEL_NAME)
+
+
+@lru_cache
+def get_sparse_embedding_model() -> SparseEmbeddingModel:
+    logger.info("Caching singleton of sparse embedding model...")
+    return SparseEmbeddingModel(model_name=SPARSE_EMBEDDING_MODEL_NAME)
 
 
 @lru_cache
@@ -39,6 +47,7 @@ def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
     return UserKnowledgeBase(
         user_id=user_id,
         dense_embedding_model=get_dense_embedding_model(),
+        sparse_embedding_model=get_sparse_embedding_model(),
         client=get_async_qdrant_client(),
         collection_name=DEFAULT_QDRANT_COLLECTION_NAME,
     )
