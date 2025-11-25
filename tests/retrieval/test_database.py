@@ -43,7 +43,9 @@ def test_get_related_chunks_with_filter(
     from src.data_models.retrieval import DocumentMetadata
 
     doc_filter = [DocumentMetadata(year="2023", quarter="Q1")]
-    chunks = db.get_related_chunks(query="test query", doc_metadata_filter=doc_filter)
+    points = db.get_related_chunks(query="test query", doc_metadata_filter=doc_filter)
+
+    chunks = [point.payload["text"] for point in points]
 
     assert chunks == ["found chunk"]
     mock_qdrant_client.search.assert_called_once()

@@ -8,11 +8,20 @@ def test_ingest_single_document_integration(
     mocker, mock_user_id, sample_docling_document
 ):
     # mock the dependencies that are outside the scope of this integration test
+    mock_get_chunker = mocker.patch("src.pipeline.data_ingestion.get_docling_chunker")
+    mock_chunker_instance = mock_get_chunker.return_value
+    # Simulate the chunker returning a list of text strings
+    mock_chunker_instance.chunk.return_value = [
+        "This is the first paragraph",
+        "This is the second paragraph",
+    ]
+
     mock_get_parser = mocker.patch("src.pipeline.data_ingestion.get_document_parser")
     mock_parser_instance = mock_get_parser.return_value
     mock_parser_instance.parse_document.return_value = sample_docling_document
 
     mock_db = MagicMock()
+    mock_db.user_id = mock_user_id
 
     # create a fake FileUploadModel
     mock_file_upload = MagicMock(spec=FileUploadModel)
