@@ -43,6 +43,8 @@ CHUNKING_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 # DEFAULT_EMBEDDING_MODEL = "models/text-embedding-004" # google embedding
 DENSE_EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 DENSE_DEFAULT = "dense_default"
+SPARSE_EMBEDDING_MODEL_NAME = "prithivida/Splade_PP_en_v1"
+SPARSE_DEFAULT = "sparse_default"
 
 
 # database
