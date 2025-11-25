@@ -1,4 +1,3 @@
-import asyncio
 import json
 import uuid
 from contextlib import asynccontextmanager
@@ -17,13 +16,13 @@ from src.pipeline.query_answering import answer_query
 from src.scripts.logging_config import setup_logging
 from src.scripts.setup_database import setup_database
 from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL
-from src.utils.dependency import get_generator, get_user_knowledge_base
+from src.utils.dependency import get_async_generator, get_user_knowledge_base
 from src.utils.exceptions import VeFRAException
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    setup_database()
+    await setup_database()
     setup_logging()
     yield
 
@@ -109,9 +108,11 @@ async def generate(
 
     try:
         db = get_user_knowledge_base(user_id=user_id)
-        rag_generator = get_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
-        answer, _ = await asyncio.to_thread(
-            answer_query, query=query, db=db, generator=rag_generator
+        rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
+        answer, _ = await answer_query(
+            query=query,
+            db=db,
+            generator=rag_generator,
         )
         return JSONResponse(
             content={

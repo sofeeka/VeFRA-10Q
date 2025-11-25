@@ -9,7 +9,7 @@ from src.utils.dependency import (
 from src.utils.exceptions import VeFRA_CollectionSetupError
 
 
-def setup_database() -> bool:
+async def setup_database() -> bool:
     """ """
 
     logger.info("Setting the database up...")
@@ -38,7 +38,7 @@ def setup_database() -> bool:
     #     )
     # }
 
-    created = manager.create_collection_if_not_exists(
+    created = await manager.create_collection_if_not_exists(
         vectors_config=dense_configs,
         # sparse_vectors_config=sparse_configs,
     )

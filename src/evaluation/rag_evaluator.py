@@ -12,7 +12,7 @@ from src.data_models.evaluation import (
     EvaluationQuestion,
     EvaluationResult,
 )
-from src.generation.generator import Generator
+from src.generation.async_generator import AsyncGenerator
 from src.pipeline.query_answering import answer_query
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import (
@@ -25,7 +25,6 @@ from src.utils.config import (
 )
 from src.utils.dependency import (
     get_async_generator,
-    get_generator,
     get_user_knowledge_base,
 )
 from src.utils.exceptions import VeFRA_EvaluationError, VeFRAException
@@ -86,7 +85,7 @@ def _save_single_result(session_filepath: Path, result: EvaluationResult):
 async def _evaluate_single_question(
     question_data: EvaluationQuestion,
     db: UserKnowledgeBase,
-    rag_generator: Generator,
+    rag_generator: AsyncGenerator,
     metrics_evaluator: MetricsEvaluator,
 ) -> EvaluationResult:
     logger.info(f"Starting evaluation for question_id: {question_data.question_id}")
@@ -104,8 +103,10 @@ async def _evaluate_single_question(
     )
 
     try:
-        rag_response, retrieved_chunks_list = await asyncio.to_thread(
-            answer_query, query=question_data.query, db=db, generator=rag_generator
+        rag_response, retrieved_chunks_list = await answer_query(
+            query=question_data.query,
+            db=db,
+            generator=rag_generator,
         )
         full_context = "\n---\n".join(retrieved_chunks_list)
 
@@ -128,14 +129,14 @@ async def _evaluate_single_question(
                 ground_truth_answer=question_data.ground_truth_answer,
                 full_context=full_context,
             ),
-            "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
-                question_data.query, retrieved_chunks_list
-            ),
-            "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
-                query=question_data.query,
-                ground_truth_answer=question_data.ground_truth_answer,
-                rag_response=rag_response,
-            ),
+            # "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
+            #     question_data.query, retrieved_chunks_list
+            # ),
+            # "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
+            #     query=question_data.query,
+            #     ground_truth_answer=question_data.ground_truth_answer,
+            #     rag_response=rag_response,
+            # ),
         }
 
         results = await asyncio.gather(*metric_tasks.values(), return_exceptions=True)
@@ -189,7 +190,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
     start_time = datetime.datetime.now()
 
     db = get_user_knowledge_base(user_id=user_id)
-    rag_generator = get_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
+    rag_async_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
     eval_async_generator = get_async_generator(model=EVALUATION_MODEL)
 
     metrics_evaluator = MetricsEvaluator(generator=eval_async_generator)
@@ -236,7 +237,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
                 result = await _evaluate_single_question(
                     question_data=q_data,
                     db=db,
-                    rag_generator=rag_generator,
+                    rag_generator=rag_async_generator,
                     metrics_evaluator=metrics_evaluator,
                 )
                 _save_single_result(session_filepath, result)

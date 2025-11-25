@@ -5,18 +5,20 @@ from src.pipeline.relevant_docs_extractor import get_relevant_docs
 from src.utils.exceptions import VeFRA_GenerationError
 
 
-def test_get_relevant_docs_specific_time(mocker):
+@pytest.mark.asyncio
+async def test_get_relevant_docs_specific_time(mocker):
     mock_output = RelevantDocumentsModel(
         status="success",
         intent=Intent.SPECIFIC_TIME,
         needed_periods=["2023 Q1", "2022 Q2"],
     )
-    mocker.patch(
+    mock_async_func = mocker.patch(
         "src.pipeline.relevant_docs_extractor.get_output_parsed_for_relevant_document_extraction",
         return_value=mock_output,
     )
+    mock_async_func.return_value = mock_output
 
-    result = get_relevant_docs(question="some query", user_id="test")
+    result = await get_relevant_docs(question="some query", user_id="test")
 
     assert result == [
         DocumentMetadata(year="2023", quarter="Q1"),
@@ -24,14 +26,16 @@ def test_get_relevant_docs_specific_time(mocker):
     ]
 
 
-def test_get_relevant_docs_k10_fallback(mocker):
+@pytest.mark.asyncio
+async def test_get_relevant_docs_k10_fallback(mocker):
     mock_output = RelevantDocumentsModel(
         status="failure", intent=Intent.K_10_FALLBACK, needed_periods=None
     )
-    mocker.patch(
+    mock_async_func = mocker.patch(
         "src.pipeline.relevant_docs_extractor.get_output_parsed_for_relevant_document_extraction",
         return_value=mock_output,
     )
+    mock_async_func.return_value = mock_output
 
     with pytest.raises(VeFRA_GenerationError, match="10 K FALLBACK triggered"):
-        get_relevant_docs(question="some query", user_id="test")
+        await get_relevant_docs(question="some query", user_id="test")

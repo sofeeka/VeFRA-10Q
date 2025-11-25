@@ -1,6 +1,8 @@
+import asyncio
+
 import qdrant_client.http.models as types
 from loguru import logger
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http.models import PointStruct
 
@@ -14,7 +16,7 @@ class UserKnowledgeBase:
     def __init__(
         self,
         user_id: str,
-        client: QdrantClient,
+        client: AsyncQdrantClient,
         dense_embedding_model: DenseEmbeddingModel,
         collection_name: str,
     ):
@@ -37,7 +39,7 @@ class UserKnowledgeBase:
             collection_name=self.collection_name,
         )
 
-    def add_chunks(self, chunks: list[ChunkPayload]):
+    async def add_chunks(self, chunks: list[ChunkPayload]):
         """
         Embed and add text chunks to the Qdrant collection.
         """
@@ -48,7 +50,9 @@ class UserKnowledgeBase:
             return
 
         texts_to_embed = [chunk.text for chunk in chunks]
-        dense_embeddings = self.dense_embedding_model.embed(texts_to_embed)
+        dense_embeddings = await asyncio.to_thread(
+            self.dense_embedding_model.embed, texts_to_embed
+        )
 
         if not dense_embeddings or len(dense_embeddings) != len(chunks):
             logger.error(
@@ -69,7 +73,7 @@ class UserKnowledgeBase:
             for i, chunk in enumerate(chunks)
         ]
 
-        result = self.client.upsert(
+        result = await self.client.upsert(
             collection_name=self.collection_name,
             points=points,
             wait=True,
@@ -91,7 +95,7 @@ class UserKnowledgeBase:
                 f"Upsert failed with status: {result.status}"
             )
 
-    def get_search_results(
+    async def get_search_results(
         self,
         query: str,
         limit: int = DEFAULT_SEARCH_K,
@@ -110,7 +114,11 @@ class UserKnowledgeBase:
             else "None",
         )
 
-        query_vector = self.dense_embedding_model.embed(query)[0]
+        import asyncio
+
+        query_vector = (
+            await asyncio.to_thread(self.dense_embedding_model.embed, query)
+        )[0]
 
         filter_params = {
             "must": [
@@ -142,7 +150,7 @@ class UserKnowledgeBase:
 
         user_filter = types.Filter(**filter_params)
 
-        search_results = self.client.search(
+        search_results = await self.client.search(
             collection_name=self.collection_name,
             query_vector=(DENSE_DEFAULT, query_vector),
             query_filter=user_filter,
@@ -165,7 +173,7 @@ class UserKnowledgeBase:
 
         return search_results
 
-    def get_related_chunks(
+    async def get_related_chunks(
         self,
         query: str,
         limit: int = DEFAULT_SEARCH_K,
@@ -175,7 +183,7 @@ class UserKnowledgeBase:
         Retrieves text chunks related to the input query.
         """
 
-        results = self.get_search_results(
+        results = await self.get_search_results(
             query=query,
             limit=limit,
             doc_metadata_filter=doc_metadata_filter,

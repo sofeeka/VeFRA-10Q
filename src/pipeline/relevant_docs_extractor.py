@@ -3,14 +3,15 @@ import re
 from src.data_models.retrieval import DocumentMetadata, Intent, RelevantDocumentsModel
 from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
-from src.utils.dependency import get_generator
+from src.utils.dependency import get_async_generator
 from src.utils.exceptions import VeFRA_GenerationError, VeFRA_MetadataExtractionError
 
 FILENAME_PATTERN = re.compile(r"(\d{4})[\s_-]+(Q[1-3])", re.IGNORECASE)
 
 
-def get_output_parsed_for_relevant_document_extraction(
-    question: str, user_id: str
+async def get_output_parsed_for_relevant_document_extraction(
+    question: str,
+    user_id: str,
 ) -> RelevantDocumentsModel:
     """ """
 
@@ -26,23 +27,26 @@ def get_output_parsed_for_relevant_document_extraction(
         question=question,
     )
 
-    generator = get_generator(model=CHOOSING_RELEVANT_DOCUMENTS_MODEL)
+    generator = get_async_generator(model=CHOOSING_RELEVANT_DOCUMENTS_MODEL)
 
-    response = generator.generate_response(
+    response = await generator.generate_response(
         prompt=prompt, text_format=RelevantDocumentsModel
     )
 
     return response.output_parsed
 
 
-def get_relevant_docs(question: str, user_id: str) -> list[DocumentMetadata] | None:
+async def get_relevant_docs(
+    question: str,
+    user_id: str,
+) -> list[DocumentMetadata] | None:
     """
     Vaildates the user query to catch fallbacks like irrelevant question.
     If successful returns a list of pairs of years and quarters needed for answering the question.
     If unsuccessful raises an Exception.
     """
 
-    output = get_output_parsed_for_relevant_document_extraction(
+    output = await get_output_parsed_for_relevant_document_extraction(
         question=question, user_id=user_id
     )
 

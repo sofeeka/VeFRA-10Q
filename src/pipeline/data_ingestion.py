@@ -5,7 +5,7 @@ from src.retrieval.database import ChunkPayload, UserKnowledgeBase
 from src.utils.dependency import get_docling_chunker, get_document_parser
 
 
-def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase):
+async def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase):
     """
     Runs the full ingestion pipeline. Reads a PDF file with Docling, processes it
     and saves to user's knowledge base
@@ -43,7 +43,7 @@ def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase):
 
     # ChunkPayloads -> Database
     logger.info("Adding chunks to the database...")
-    db.add_chunks(chunks=chunk_payloads)
+    await db.add_chunks(chunks=chunk_payloads)
     logger.success(
         "Document ingestion pipeline completed successfully.",
         filename=model.file.filename,
