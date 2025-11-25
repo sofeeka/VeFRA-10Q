@@ -8,21 +8,21 @@ from src.retrieval.database import UserKnowledgeBase
 @pytest.mark.asyncio
 async def test_add_chunks_success(
     mock_async_qdrant_client,
-    mock_embedding_model,
+    mock_dense_embedding_model,
     mock_sparse_embedding_model,
     mock_user_id,
 ):
     db = UserKnowledgeBase(
         user_id=mock_user_id,
         client=mock_async_qdrant_client,
-        dense_embedding_model=mock_embedding_model,
+        dense_embedding_model=mock_dense_embedding_model,
         sparse_embedding_model=mock_sparse_embedding_model,
         collection_name="test-collection",
     )
     chunks = [ChunkPayload(text="chunk 1"), ChunkPayload(text="chunk 2")]
 
     # Mock dense embeddings
-    mock_embedding_model.embed.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+    mock_dense_embedding_model.embed.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
     # Mock sparse embeddings
     from qdrant_client import models
@@ -39,7 +39,7 @@ async def test_add_chunks_success(
     await db.add_chunks(chunks)
 
     # Verify both embedding models were called
-    mock_embedding_model.embed.assert_called_once_with(["chunk 1", "chunk 2"])
+    mock_dense_embedding_model.embed.assert_called_once_with(["chunk 1", "chunk 2"])
     mock_sparse_embedding_model.embed.assert_called_once_with(["chunk 1", "chunk 2"])
     mock_async_qdrant_client.upsert.assert_awaited_once()
 
@@ -57,14 +57,14 @@ async def test_add_chunks_success(
 @pytest.mark.asyncio
 async def test_get_related_chunks_with_filter(
     mock_async_qdrant_client,
-    mock_embedding_model,
+    mock_dense_embedding_model,
     mock_sparse_embedding_model,
     mock_user_id,
 ):
     db = UserKnowledgeBase(
         user_id=mock_user_id,
         client=mock_async_qdrant_client,
-        dense_embedding_model=mock_embedding_model,
+        dense_embedding_model=mock_dense_embedding_model,
         sparse_embedding_model=mock_sparse_embedding_model,
         collection_name="test-collection",
     )
@@ -105,7 +105,7 @@ async def test_get_related_chunks_with_filter(
 @pytest.mark.asyncio
 async def test_hybrid_search_uses_both_embeddings(
     mock_async_qdrant_client,
-    mock_embedding_model,
+    mock_dense_embedding_model,
     mock_sparse_embedding_model,
     mock_user_id,
 ):
@@ -113,13 +113,13 @@ async def test_hybrid_search_uses_both_embeddings(
     db = UserKnowledgeBase(
         user_id=mock_user_id,
         client=mock_async_qdrant_client,
-        dense_embedding_model=mock_embedding_model,
+        dense_embedding_model=mock_dense_embedding_model,
         sparse_embedding_model=mock_sparse_embedding_model,
         collection_name="test-collection",
     )
 
     # Mock embedding responses
-    mock_embedding_model.embed.return_value = [[0.1, 0.2, 0.3]]
+    mock_dense_embedding_model.embed.return_value = [[0.1, 0.2, 0.3]]
 
     from qdrant_client import models
 
@@ -130,14 +130,14 @@ async def test_hybrid_search_uses_both_embeddings(
     await db.get_search_results(query="test query")
 
     # Verify both embedding models were called for the query
-    mock_embedding_model.embed.assert_called_once()
+    mock_dense_embedding_model.embed.assert_called_once()
     mock_sparse_embedding_model.embed.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_hybrid_search_uses_rrf_fusion(
     mock_async_qdrant_client,
-    mock_embedding_model,
+    mock_dense_embedding_model,
     mock_sparse_embedding_model,
     mock_user_id,
 ):
@@ -145,7 +145,7 @@ async def test_hybrid_search_uses_rrf_fusion(
     db = UserKnowledgeBase(
         user_id=mock_user_id,
         client=mock_async_qdrant_client,
-        dense_embedding_model=mock_embedding_model,
+        dense_embedding_model=mock_dense_embedding_model,
         sparse_embedding_model=mock_sparse_embedding_model,
         collection_name="test-collection",
     )
@@ -166,7 +166,7 @@ async def test_hybrid_search_uses_rrf_fusion(
 @pytest.mark.asyncio
 async def test_add_chunks_with_empty_list(
     mock_async_qdrant_client,
-    mock_embedding_model,
+    mock_dense_embedding_model,
     mock_sparse_embedding_model,
     mock_user_id,
 ):
@@ -174,7 +174,7 @@ async def test_add_chunks_with_empty_list(
     db = UserKnowledgeBase(
         user_id=mock_user_id,
         client=mock_async_qdrant_client,
-        dense_embedding_model=mock_embedding_model,
+        dense_embedding_model=mock_dense_embedding_model,
         sparse_embedding_model=mock_sparse_embedding_model,
         collection_name="test-collection",
     )
@@ -183,6 +183,6 @@ async def test_add_chunks_with_empty_list(
     await db.add_chunks([])
 
     # Should not call embedding models or upsert
-    mock_embedding_model.embed.assert_not_called()
+    mock_dense_embedding_model.embed.assert_not_called()
     mock_sparse_embedding_model.embed.assert_not_called()
     mock_async_qdrant_client.upsert.assert_not_awaited()

@@ -97,7 +97,7 @@ def mock_async_qdrant_client(mocker):
 
 
 @pytest.fixture
-def mock_embedding_model(mocker):
+def mock_dense_embedding_model(mocker):
     """Mocks the dense embedding model."""
     mock_model = mocker.MagicMock(spec=DenseEmbeddingModel)
     mock_model.embed.return_value = [[0.1, 0.2, 0.3]]
