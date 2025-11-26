@@ -47,22 +47,30 @@ async def process_document_ingestion(model: FileUploadModel):
         filename=model.file.filename,
         user_id=model.user_id,
     )
+    import time
+
+    start_time = time.monotonic()
+
     await save_uploaded_document(model=model)
 
     db = get_user_knowledge_base(user_id=model.user_id)
     try:
         await ingest_single_document(model=model, db=db)
+        duration = time.monotonic() - start_time
         logger.success(
-            "Document ingestion process completed successfully.",
+            f"Document ingestion process completed successfully in {duration:.2f} seconds.",
             filename=model.file.filename,
             user_id=model.user_id,
+            duration=duration,
         )
     except Exception as e:
+        duration = time.monotonic() - start_time
         logger.error(
-            "Ingestion pipeline failed. Cleaning up saved document.",
+            f"Ingestion pipeline failed after {duration:.2f} seconds. Cleaning up saved document.",
             filename=model.file.filename,
             user_id=model.user_id,
             exc_info=True,
+            duration=duration,
         )
         _cleanup_document(filepath=model.filepath)
         raise e
