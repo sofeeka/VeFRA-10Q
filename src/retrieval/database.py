@@ -183,15 +183,16 @@ class UserKnowledgeBase:
                     query=dense_query_vector,
                     using=DENSE_DEFAULT,
                     limit=limit,
+                    filter=user_filter,
                 ),
                 types.Prefetch(
                     query=sparse_query_vector,
                     using=SPARSE_DEFAULT,
                     limit=limit,
+                    filter=user_filter,
                 ),
             ],
             query=types.FusionQuery(fusion=types.Fusion.RRF),
-            query_filter=user_filter,
             limit=limit,
             with_payload=True,
         )
