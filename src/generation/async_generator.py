@@ -37,6 +37,7 @@ class AsyncGenerator(BaseGenerator):
         self,
         prompt: str,
         text_format: BaseModel = ResponseModel,
+        reasoning_effort: str = "medium",
     ) -> ParsedResponse:
         """
         Asynchronously generates a response to a user query using RAG.
@@ -51,6 +52,8 @@ class AsyncGenerator(BaseGenerator):
                 {"role": "user", "content": prompt},
             ],
             text_format=text_format,
+            # this adds ability to configure reasoning effort for gpt-5 models (gpt-4 and lower do not accept this parameter)
+            reasoning={"effort": reasoning_effort} if "5" in self.model else {},
         )
         return response
 
