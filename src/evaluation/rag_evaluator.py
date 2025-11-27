@@ -13,6 +13,7 @@ from src.data_models.evaluation import (
     EvaluationResult,
 )
 from src.generation.async_generator import AsyncGenerator
+from src.generation.prompts import EVALUATION_SYSTEM_PROMPT
 from src.pipeline.query_answering import answer_query
 from src.retrieval.database import UserKnowledgeBase
 from src.utils.config import (
@@ -191,7 +192,10 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
 
     db = get_user_knowledge_base(user_id=user_id)
     rag_async_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
-    eval_async_generator = get_async_generator(model=EVALUATION_MODEL)
+    eval_async_generator = get_async_generator(
+        model=EVALUATION_MODEL,
+        system_prompt=EVALUATION_SYSTEM_PROMPT,
+    )
 
     metrics_evaluator = MetricsEvaluator(generator=eval_async_generator)
 

@@ -8,7 +8,8 @@ from qdrant_client.http.models import PointStruct
 
 from src.data_models.retrieval import ChunkPayload, DocumentMetadata
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
-from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT
+from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
+from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT, SPARSE_DEFAULT
 from src.utils.exceptions import VeFRA_DatabaseError, VeFRA_DataInsertionError
 
 
@@ -18,6 +19,7 @@ class UserKnowledgeBase:
         user_id: str,
         client: AsyncQdrantClient,
         dense_embedding_model: DenseEmbeddingModel,
+        sparse_embedding_model: SparseEmbeddingModel,
         collection_name: str,
     ):
         if not all([user_id, dense_embedding_model, client]):
@@ -25,6 +27,7 @@ class UserKnowledgeBase:
                 "Missing one or more required arguments for UserKnowledgeBase.",
                 user_id_is_present=bool(user_id),
                 embedding_model_is_present=bool(dense_embedding_model),
+                sparse_embedding_model_is_present=bool(sparse_embedding_model),
                 client_is_present=bool(client),
             )
             raise ValueError("user_id, client, and dense_embedding_model are required.")
@@ -32,6 +35,7 @@ class UserKnowledgeBase:
         self.user_id = user_id
         self.client = client
         self.dense_embedding_model = dense_embedding_model
+        self.sparse_embedding_model = sparse_embedding_model
         self.collection_name = collection_name
         logger.info(
             "Initialized Knowledge Base for user.",
@@ -50,24 +54,39 @@ class UserKnowledgeBase:
             return
 
         texts_to_embed = [chunk.text for chunk in chunks]
-        dense_embeddings = await asyncio.to_thread(
-            self.dense_embedding_model.embed, texts_to_embed
+
+        dense_embeddings, sparse_embeddings = await asyncio.gather(
+            asyncio.to_thread(self.dense_embedding_model.embed, texts_to_embed),
+            asyncio.to_thread(self.sparse_embedding_model.embed, texts_to_embed),
         )
 
         if not dense_embeddings or len(dense_embeddings) != len(chunks):
             logger.error(
-                "Embedding failed or returned mismatched number of embeddings.",
+                "Dense embedding failed or returned mismatched number of embeddings.",
                 expected_count=len(chunks),
                 actual_count=len(dense_embeddings) if dense_embeddings else 0,
             )
             raise VeFRA_DatabaseError(
-                "Embedding failed or returned mismatched number of embeddings."
+                "Dense embedding failed or returned mismatched number of embeddings."
+            )
+
+        if not sparse_embeddings or len(sparse_embeddings) != len(chunks):
+            logger.error(
+                "Sparse embedding failed or returned mismatched number of embeddings.",
+                expected_count=len(chunks),
+                actual_count=len(sparse_embeddings) if sparse_embeddings else 0,
+            )
+            raise VeFRA_DatabaseError(
+                "Sparse embedding failed or returned mismatched number of embeddings."
             )
 
         points = [
             PointStruct(
                 id=chunk.id,
-                vector={DENSE_DEFAULT: dense_embeddings[i]},
+                vector={
+                    DENSE_DEFAULT: dense_embeddings[i],
+                    SPARSE_DEFAULT: sparse_embeddings[i],
+                },
                 payload={**chunk.model_dump(), "user_id": self.user_id},
             )
             for i, chunk in enumerate(chunks)
@@ -116,9 +135,13 @@ class UserKnowledgeBase:
 
         import asyncio
 
-        query_vector = (
-            await asyncio.to_thread(self.dense_embedding_model.embed, query)
-        )[0]
+        dense_results, sparse_results = await asyncio.gather(
+            asyncio.to_thread(self.dense_embedding_model.embed, [query]),
+            asyncio.to_thread(self.sparse_embedding_model.embed, [query]),
+        )
+
+        dense_query_vector = dense_results[0]
+        sparse_query_vector = sparse_results[0]
 
         filter_params = {
             "must": [
@@ -150,13 +173,30 @@ class UserKnowledgeBase:
 
         user_filter = types.Filter(**filter_params)
 
-        search_results = await self.client.search(
+        # Perform hybrid search using query fusion
+        query_response = await self.client.query_points(
             collection_name=self.collection_name,
-            query_vector=(DENSE_DEFAULT, query_vector),
-            query_filter=user_filter,
+            prefetch=[
+                types.Prefetch(
+                    query=dense_query_vector,
+                    using=DENSE_DEFAULT,
+                    limit=limit,
+                    filter=user_filter,
+                ),
+                types.Prefetch(
+                    query=sparse_query_vector,
+                    using=SPARSE_DEFAULT,
+                    limit=limit,
+                    filter=user_filter,
+                ),
+            ],
+            query=types.FusionQuery(fusion=types.Fusion.RRF),
             limit=limit,
             with_payload=True,
         )
+
+        # Extract points from the query response
+        search_results = query_response.points
 
         logger.info(
             "Vector search completed.",

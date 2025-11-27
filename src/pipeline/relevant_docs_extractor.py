@@ -1,7 +1,10 @@
 import re
 
 from src.data_models.retrieval import DocumentMetadata, Intent, RelevantDocumentsModel
-from src.generation.prompts import CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT
+from src.generation.prompts import (
+    CHOOSING_RELEVANT_DOCUMENTS_PROMPT,
+    CHOOSING_RELEVANT_DOCUMENTS_SYSTEM_PROMPT,
+)
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_async_generator
 from src.utils.exceptions import VeFRA_GenerationError, VeFRA_MetadataExtractionError
@@ -21,13 +24,16 @@ async def get_output_parsed_for_relevant_document_extraction(
     except VeFRA_MetadataExtractionError:
         year, quarter = "N/A", "N/A"
 
-    prompt = CHOOSING_RELEVANT_DOCUMENTS_PROMPT_BASE_PROMPT.format(
+    prompt = CHOOSING_RELEVANT_DOCUMENTS_PROMPT.format(
         year=year,
         quarter=quarter,
         question=question,
     )
 
-    generator = get_async_generator(model=CHOOSING_RELEVANT_DOCUMENTS_MODEL)
+    generator = get_async_generator(
+        model=CHOOSING_RELEVANT_DOCUMENTS_MODEL,
+        system_prompt=CHOOSING_RELEVANT_DOCUMENTS_SYSTEM_PROMPT,
+    )
 
     response = await generator.generate_response(
         prompt=prompt, text_format=RelevantDocumentsModel
@@ -55,9 +61,9 @@ async def get_relevant_docs(
             raise VeFRA_GenerationError(
                 f"This system is designed to assist people with financial analysis. Question {question} is irrelevant."
             )
-        elif output.intent == Intent.K_10_FALLBACK:
+        elif output.intent == Intent.WRONG_Q_FALLBACK:
             raise VeFRA_GenerationError(
-                f"10 K FALLBACK triggered for question {question}"
+                f"WRONG Q FALLBACK triggered for question {question}"
             )
         else:
             raise

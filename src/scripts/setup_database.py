@@ -1,7 +1,7 @@
 from loguru import logger
 from qdrant_client import models
 
-from src.utils.config import DENSE_DEFAULT
+from src.utils.config import DENSE_DEFAULT, SPARSE_DEFAULT
 from src.utils.dependency import (
     get_dense_embedding_model,
     get_qdrant_collection_manager,
@@ -29,18 +29,18 @@ async def setup_database() -> bool:
         # ),
     }
 
-    # sparse_configs = {
-    #     "sparse_splade": models.SparseVectorParams(
-    #         index=models.SparseIndexParams(
-    #             on_disk=True,  # Sparse indexes are often large
-    #             full_scan_threshold=1000,
-    #         )
-    #     )
-    # }
+    sparse_configs = {
+        SPARSE_DEFAULT: models.SparseVectorParams(
+            index=models.SparseIndexParams(
+                on_disk=True,  # Sparse indexes are often large
+                full_scan_threshold=1000,
+            )
+        )
+    }
 
     created = await manager.create_collection_if_not_exists(
         vectors_config=dense_configs,
-        # sparse_vectors_config=sparse_configs,
+        sparse_vectors_config=sparse_configs,
     )
 
     if not created:

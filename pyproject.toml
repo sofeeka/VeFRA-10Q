@@ -20,3 +20,7 @@ extend-safe-fixes = ["UP006", "UP007"]
 [tool.pytest.ini_options]
 pythonpath = "."
 testpaths = ["tests"]
+markers = [
+    "real_api: marks tests that make real API calls to external services (e.g., OpenAI)",
+]
+asyncio_mode = "auto"

@@ -70,7 +70,6 @@ async def answer_query(
             [],
         )
 
-    #
     context_parts = []
     final_rebuilt_chunks = []
 
@@ -81,6 +80,12 @@ async def answer_query(
         year = metadata.get("year", "N/A")
         quarter = metadata.get("quarter", "N/A")
 
+        logger.debug(
+            f"Point {i}: ",
+            payload=payload,
+            raw_chunk_text=raw_chunk_text,
+            metadata=metadata,
+        )
         rebuilt_chunk = process_chunk_after_retrieval(
             chunk=raw_chunk_text,
             user_id=db.user_id,

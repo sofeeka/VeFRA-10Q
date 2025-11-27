@@ -1,4 +1,4 @@
-from fastembed.embedding import DefaultEmbedding
+from fastembed import TextEmbedding
 from loguru import logger
 
 
@@ -7,7 +7,7 @@ class DenseEmbeddingModel:
 
     def __init__(self, model_name: str):
         logger.info("Initializing FastEmbed model for dense embeddigns...")
-        self.model = DefaultEmbedding(model_name=model_name)
+        self.model = TextEmbedding(model_name=model_name)
 
         # calculate dimension (needed for Qdrant)
         dummy_embedding = list(self.model.embed("test"))[0]

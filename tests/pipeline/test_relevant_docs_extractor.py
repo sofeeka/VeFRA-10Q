@@ -27,9 +27,9 @@ async def test_get_relevant_docs_specific_time(mocker):
 
 
 @pytest.mark.asyncio
-async def test_get_relevant_docs_k10_fallback(mocker):
+async def test_get_relevant_docs_wrong_q_fallback(mocker):
     mock_output = RelevantDocumentsModel(
-        status="failure", intent=Intent.K_10_FALLBACK, needed_periods=None
+        status="failure", intent=Intent.WRONG_Q_FALLBACK, needed_periods=None
     )
     mock_async_func = mocker.patch(
         "src.pipeline.relevant_docs_extractor.get_output_parsed_for_relevant_document_extraction",
@@ -37,5 +37,5 @@ async def test_get_relevant_docs_k10_fallback(mocker):
     )
     mock_async_func.return_value = mock_output
 
-    with pytest.raises(VeFRA_GenerationError, match="10 K FALLBACK triggered"):
+    with pytest.raises(VeFRA_GenerationError, match="WRONG Q FALLBACK triggered"):
         await get_relevant_docs(question="some query", user_id="test")

@@ -13,6 +13,7 @@ from qdrant_client.http import models as rest
 from src.api.app import app
 from src.data_models.generation import ResponseModel
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
+from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
 
 
 @pytest.fixture(scope="session")
@@ -86,15 +87,36 @@ def mock_async_qdrant_client(mocker):
     client.search.return_value = [
         ScoredPoint(id="1", version=1, score=0.9, payload={"text": "chunk 1"})
     ]
+    # Mock query_points for hybrid search
+    query_response = mocker.MagicMock()
+    query_response.points = [
+        ScoredPoint(id="1", version=1, score=0.9, payload={"text": "chunk 1"})
+    ]
+    client.query_points.return_value = query_response
     return client
 
 
 @pytest.fixture
-def mock_embedding_model(mocker):
+def mock_dense_embedding_model(mocker):
     """Mocks the dense embedding model."""
     mock_model = mocker.MagicMock(spec=DenseEmbeddingModel)
     mock_model.embed.return_value = [[0.1, 0.2, 0.3]]
     mock_model.dim = 3
+    return mock_model
+
+
+@pytest.fixture
+def mock_sparse_embedding_model(mocker):
+    """Mocks the sparse embedding model."""
+    from qdrant_client import models
+
+    mock_model = mocker.MagicMock(spec=SparseEmbeddingModel)
+    # Mock sparse vector output (indices and values)
+    mock_sparse_vector = models.SparseVector(
+        indices=[10, 25, 42, 100], values=[0.5, 0.8, 0.3, 0.6]
+    )
+    mock_model.embed.return_value = [mock_sparse_vector]
+    mock_model.dim = 30522  # Typical BERT vocab size
     return mock_model
 
 
