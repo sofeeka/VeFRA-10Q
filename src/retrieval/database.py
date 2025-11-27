@@ -54,11 +54,10 @@ class UserKnowledgeBase:
             return
 
         texts_to_embed = [chunk.text for chunk in chunks]
-        dense_embeddings = await asyncio.to_thread(
-            self.dense_embedding_model.embed, texts_to_embed
-        )
-        sparse_embeddings = await asyncio.to_thread(
-            self.sparse_embedding_model.embed, texts_to_embed
+
+        dense_embeddings, sparse_embeddings = await asyncio.gather(
+            asyncio.to_thread(self.dense_embedding_model.embed, texts_to_embed),
+            asyncio.to_thread(self.sparse_embedding_model.embed, texts_to_embed),
         )
 
         if not dense_embeddings or len(dense_embeddings) != len(chunks):
@@ -136,14 +135,13 @@ class UserKnowledgeBase:
 
         import asyncio
 
-        # Generate both dense and sparse query vectors
-        dense_query_vector = (
-            await asyncio.to_thread(self.dense_embedding_model.embed, [query])
-        )[0]
+        dense_results, sparse_results = await asyncio.gather(
+            asyncio.to_thread(self.dense_embedding_model.embed, [query]),
+            asyncio.to_thread(self.sparse_embedding_model.embed, [query]),
+        )
 
-        sparse_query_vector = (
-            await asyncio.to_thread(self.sparse_embedding_model.embed, [query])
-        )[0]
+        dense_query_vector = dense_results[0]
+        sparse_query_vector = sparse_results[0]
 
         filter_params = {
             "must": [
