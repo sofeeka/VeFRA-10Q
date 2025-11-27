@@ -9,7 +9,12 @@ from qdrant_client.http.models import PointStruct
 from src.data_models.retrieval import ChunkPayload, DocumentMetadata
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
-from src.utils.config import DEFAULT_SEARCH_K, DENSE_DEFAULT, SPARSE_DEFAULT
+from src.utils.config import (
+    CHUNKS_PER_DOC,
+    DEFAULT_SEARCH_K,
+    DENSE_DEFAULT,
+    SPARSE_DEFAULT,
+)
 from src.utils.exceptions import VeFRA_DatabaseError, VeFRA_DataInsertionError
 
 
@@ -143,18 +148,23 @@ class UserKnowledgeBase:
         dense_query_vector = dense_results[0]
         sparse_query_vector = sparse_results[0]
 
-        filter_params = {
-            "must": [
-                types.FieldCondition(
-                    key="user_id", match=types.MatchValue(value=self.user_id)
-                )
-            ]
-        }
-
         if doc_metadata_filter:
-            should_clauses = [
-                types.Filter(
-                    must=[
+            # If metadata filter is present, we want to retrieve CHUNKS_PER_DOC for EACH document
+            all_search_results = []
+
+            # We need to perform a search for each document in the filter
+            # This is because we want to ensure we get N chunks from EACH document
+            # A single query with a large limit might return all chunks from one document and none from others
+
+            # Optimization: We can run these in parallel
+            search_tasks = []
+            for doc in doc_metadata_filter:
+                # Create a specific filter for this document
+                specific_filter_params = {
+                    "must": [
+                        types.FieldCondition(
+                            key="user_id", match=types.MatchValue(value=self.user_id)
+                        ),
                         types.FieldCondition(
                             key="metadata.year",
                             match=types.MatchValue(value=doc.year),
@@ -164,39 +174,76 @@ class UserKnowledgeBase:
                             match=types.MatchValue(value=doc.quarter),
                         ),
                     ]
+                }
+
+                specific_user_filter = types.Filter(**specific_filter_params)
+
+                search_tasks.append(
+                    self.client.query_points(
+                        collection_name=self.collection_name,
+                        prefetch=[
+                            types.Prefetch(
+                                query=dense_query_vector,
+                                using=DENSE_DEFAULT,
+                                limit=CHUNKS_PER_DOC,
+                                filter=specific_user_filter,
+                            ),
+                            types.Prefetch(
+                                query=sparse_query_vector,
+                                using=SPARSE_DEFAULT,
+                                limit=CHUNKS_PER_DOC,
+                                filter=specific_user_filter,
+                            ),
+                        ],
+                        query=types.FusionQuery(fusion=types.Fusion.RRF),
+                        limit=CHUNKS_PER_DOC,
+                        with_payload=True,
+                    )
                 )
-                for doc in doc_metadata_filter
-            ]
 
-            if should_clauses:
-                filter_params["should"] = should_clauses
+            # Execute all searches
+            results = await asyncio.gather(*search_tasks)
 
-        user_filter = types.Filter(**filter_params)
+            for result in results:
+                all_search_results.extend(result.points)
 
-        # Perform hybrid search using query fusion
-        query_response = await self.client.query_points(
-            collection_name=self.collection_name,
-            prefetch=[
-                types.Prefetch(
-                    query=dense_query_vector,
-                    using=DENSE_DEFAULT,
-                    limit=limit,
-                    filter=user_filter,
-                ),
-                types.Prefetch(
-                    query=sparse_query_vector,
-                    using=SPARSE_DEFAULT,
-                    limit=limit,
-                    filter=user_filter,
-                ),
-            ],
-            query=types.FusionQuery(fusion=types.Fusion.RRF),
-            limit=limit,
-            with_payload=True,
-        )
+            search_results = all_search_results
 
-        # Extract points from the query response
-        search_results = query_response.points
+        else:  # when no filter is available
+            filter_params = {
+                "must": [
+                    types.FieldCondition(
+                        key="user_id", match=types.MatchValue(value=self.user_id)
+                    )
+                ]
+            }
+
+            user_filter = types.Filter(**filter_params)
+
+            # Perform hybrid search using query fusion
+            query_response = await self.client.query_points(
+                collection_name=self.collection_name,
+                prefetch=[
+                    types.Prefetch(
+                        query=dense_query_vector,
+                        using=DENSE_DEFAULT,
+                        limit=limit,
+                        filter=user_filter,
+                    ),
+                    types.Prefetch(
+                        query=sparse_query_vector,
+                        using=SPARSE_DEFAULT,
+                        limit=limit,
+                        filter=user_filter,
+                    ),
+                ],
+                query=types.FusionQuery(fusion=types.Fusion.RRF),
+                limit=limit,
+                with_payload=True,
+            )
+
+            # Extract points from the query response
+            search_results = query_response.points
 
         logger.info(
             "Vector search completed.",
