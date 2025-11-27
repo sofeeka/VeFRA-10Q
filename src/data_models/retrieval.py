@@ -70,3 +70,19 @@ class DocumentMetadata(BaseModel):
 
     year: str  # YYYY
     quarter: str  # Q1, Q2, Q3
+
+
+class QueryExpansionModel(BaseModel):
+    """
+    A DTO for query expansion.
+    """
+
+    queries: list[str]
+
+
+class ExpandedQuery(BaseModel):
+    """
+    A DTO for expanded query.
+    """
+
+    query: str
