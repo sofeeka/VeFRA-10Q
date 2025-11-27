@@ -62,7 +62,7 @@ def setup_logging():
 
     # Add a handler for file logging (essential for production)
     # This uses our custom JSON formatter
-    log_file_path = LOGS_DIR / "vefra_app_{time}.log"
+    log_file_path = LOGS_DIR / "vefra_app_{time}.jsonl"
     logger.add(
         log_file_path,
         level="DEBUG",  # Log everything to the file
