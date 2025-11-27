@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class Intent(str, Enum):
-    K_10_FALLBACK = "K_10_FALLBACK"
+    WRONG_Q_FALLBACK = "WRONG_Q_FALLBACK"
     IRRELEVANT_QUESTION = "IRRELEVANT_QUESTION"
     SPECIFIC_TIME = "SPECIFIC_TIME"
     GENERAL_QUESTION = "GENERAL_QUESTION"
@@ -24,9 +24,9 @@ class RelevantDocumentsModel(BaseModel):
         Does a final check that the combination of fields and values is valid.
         """
         if self.status == "failure":
-            if self.intent not in [Intent.IRRELEVANT_QUESTION, Intent.K_10_FALLBACK]:
+            if self.intent not in [Intent.IRRELEVANT_QUESTION, Intent.WRONG_Q_FALLBACK]:
                 raise ValueError(
-                    f"For a 'failure' status, intent must be IRRELEVANT_QUESTION or K_10_FALLBACK, not {self.intent}"
+                    f"For a 'failure' status, intent must be IRRELEVANT_QUESTION or WRONG_Q_FALLBACK, not {self.intent}"
                 )
             if self.needed_periods:
                 raise ValueError(

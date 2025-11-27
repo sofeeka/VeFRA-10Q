@@ -61,9 +61,9 @@ async def get_relevant_docs(
             raise VeFRA_GenerationError(
                 f"This system is designed to assist people with financial analysis. Question {question} is irrelevant."
             )
-        elif output.intent == Intent.K_10_FALLBACK:
+        elif output.intent == Intent.WRONG_Q_FALLBACK:
             raise VeFRA_GenerationError(
-                f"10 K FALLBACK triggered for question {question}"
+                f"WRONG Q FALLBACK triggered for question {question}"
             )
         else:
             raise
