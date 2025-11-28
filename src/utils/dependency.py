@@ -14,11 +14,13 @@ from src.retrieval.database import UserKnowledgeBase
 from src.retrieval.database_manager import QdrantCollectionManager
 from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
 from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
+from src.retrieval.reranker import FinancialReranker
 from src.utils.api_key_manager import get_openai_api_key
 from src.utils.config import (
     DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_STORAGE_PATH,
     DENSE_EMBEDDING_MODEL_NAME,
+    RERANKING_MODEL,
     SPARSE_EMBEDDING_MODEL_NAME,
 )
 
@@ -49,6 +51,13 @@ def get_async_qdrant_client() -> AsyncQdrantClient:
 def get_document_parser() -> DocumentParser:
     logger.info("Initializing document parser (cached)...")
     return DocumentParser()
+
+
+# EXPENSIVE: model loading
+@lru_cache
+def get_reranking_model() -> FinancialReranker:
+    logger.info("Initializing reranking model (cached)...")
+    return FinancialReranker(model_name=RERANKING_MODEL)
 
 
 def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
