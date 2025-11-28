@@ -61,9 +61,7 @@ EVALUATION_MODEL = "gpt-5-nano"
 QUERY_EXPANSION_MODEL = "gpt-5-nano"
 
 # reranking
-# RERANKING_MODEL = "colbert-ir/colbertv2.0"
-# RERANKING_MODEL = "BAAI/bge-reranker-large" too big
-RERANKING_MODEL = "mixedbread-ai/mxbai-rerank-base-v2"
+RERANKING_MODEL = "jinaai/jina-reranker-v2-base-multilingual"
 
 # evaluation
 EVALUATION_CONCURRENCY_LIMIT = 10

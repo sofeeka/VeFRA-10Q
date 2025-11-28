@@ -27,7 +27,7 @@ class FinancialReranker:
             trust_remote_code=True,
             torch_dtype=torch.float16 if self.device != "cpu" else torch.float32,
             # attn_implementation="flash_attention_2" if self.device == "cuda" else None,
-            attn_implementation="sdpa",
+            # attn_implementation="sdpa",
         )
         self.model.to(self.device)
         self.model.eval()
