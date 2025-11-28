@@ -7,7 +7,7 @@ from src.utils.dependency import get_async_generator
 
 
 async def expand_query(query: str) -> list[str]:
-    logger.info("Expanding the query.", query=query)
+    logger.info(f"Expanding the query: {query}", query=query)
 
     generator = get_async_generator(
         model=QUERY_EXPANSION_MODEL, system_prompt=QUERY_EXPANSION_SYSTEM_PROMPT
@@ -16,9 +16,12 @@ async def expand_query(query: str) -> list[str]:
     response = await generator.generate_response(
         prompt=query, text_format=QueryExpansionModel
     )
+    logger.debug("Query expansion response received.", response=response)
 
+    logger.debug("Extracting expanded queries...")
     expanded_queries = response.output_parsed.queries
+    logger.debug("Expanded queries extracted.", expanded_queries=expanded_queries)
 
-    queries = [query.query for query in expanded_queries]
-
-    return queries
+    logger.debug("Extracting text from queries...")
+    logger.info(f"type: {type(expanded_queries)}")
+    return expanded_queries
