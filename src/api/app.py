@@ -16,7 +16,11 @@ from src.pipeline.query_answering import answer_query
 from src.scripts.logging_config import setup_logging
 from src.scripts.setup_database import setup_database
 from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL
-from src.utils.dependency import get_async_generator, get_user_knowledge_base
+from src.utils.dependency import (
+    get_async_generator,
+    get_reranking_model,
+    get_user_knowledge_base,
+)
 from src.utils.exceptions import VeFRAException
 
 
@@ -24,6 +28,9 @@ from src.utils.exceptions import VeFRAException
 async def lifespan(app: FastAPI):
     await setup_database()
     setup_logging()
+    logger.info("Pre-loading expensive models at startup...")
+    get_reranking_model()
+    logger.info("Models pre-loaded successfully.")
     yield
 
 
