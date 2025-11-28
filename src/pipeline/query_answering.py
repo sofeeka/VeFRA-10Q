@@ -6,6 +6,7 @@ from src.pipeline.query_expansion import expand_query
 from src.pipeline.relevant_docs_extractor import get_relevant_docs
 from src.processing.document_processor import process_chunk_after_retrieval
 from src.retrieval.database import UserKnowledgeBase
+from src.utils.dependency import get_reranking_model
 from src.utils.exceptions import VeFRA_GenerationError
 
 
@@ -37,6 +38,14 @@ async def extract_relevant_docs(user_id: str, query: str) -> list[DocumentMetada
             "An unexpected error occurred during document metadata extraction. Proceeding without filter."
         )
         return []
+
+
+def format_for_prompt(ordered_chunks: list[str]) -> str:
+    """
+    Helper to join chunks into a single string for the LLM prompt.
+    Adds clear separators so the LLM knows where one chunk ends.
+    """
+    return "\n\n---\n\n".join(ordered_chunks)
 
 
 async def answer_query(
@@ -116,19 +125,32 @@ async def answer_query(
         )
         final_rebuilt_chunks.append(rebuilt_chunk)
 
-        # Re-rank the chunks
         context_block = f"""
---- START OF CONTEXT CHUNK {i + 1} ---
-Source Document: {year} {quarter}
-
+Document: {year} {quarter}
 Content:
 {rebuilt_chunk}
---- END OF CONTEXT CHUNK {i + 1} ---
 """
         context_parts.append(context_block)
 
-    # (context (rebuilt chunks) + user question -> Generator) + system prompt - > LLM response
-    context: str = "\n---\n".join(context_parts)
+    logger.debug("Reconstructed context parts.", context_parts=context_parts)
+    # Re-rank the chunks
+    reranker = get_reranking_model()
+    try:
+        reranked_chunks = reranker.rerank(
+            query=query,
+            chunks=final_rebuilt_chunks,
+            top_n=10,
+        )
+    except Exception:
+        logger.error(
+            "Re-ranking failed. Proceeding with original chunk order.",
+            user_id=db.user_id,
+            exc_info=True,
+        )
+        reranked_chunks = final_rebuilt_chunks
+
+    # Format the context
+    context: str = format_for_prompt(reranked_chunks)
 
     logger.info("Constructed final context for LLM.", context_length=len(context))
 
@@ -145,7 +167,7 @@ Content:
         parsed_response = await generator.generate_response(prompt=user_prompt)
         response = parsed_response.output_parsed.response
         logger.success("Successfully generated and parsed response from LLM.")
-        return response, final_rebuilt_chunks
+        return response, reranked_chunks
     except Exception:
         logger.error(
             "Failed to generate or parse response from LLM.",
