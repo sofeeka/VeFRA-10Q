@@ -36,7 +36,7 @@ class FinancialReranker:
         self,
         query: str,
         chunks: list[str],
-        top_n: int = 5,
+        top_n: int,
         batch_size=8,
     ) -> list[str]:
         """
