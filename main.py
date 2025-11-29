@@ -19,7 +19,7 @@ async def main():
     query = "In Q1 2023, how did Microsoft's operating expenses measure up against its revenue?"
     rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
 
-    answer, _ = await answer_query(query=query, db=db, generator=rag_generator)
+    answer, _ = await answer_query(input_query=query, db=db, generator=rag_generator)
     print(answer)
 
 

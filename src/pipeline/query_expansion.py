@@ -23,5 +23,4 @@ async def expand_query(query: str) -> list[str]:
     logger.debug("Expanded queries extracted.", expanded_queries=expanded_queries)
 
     logger.debug("Extracting text from queries...")
-    logger.info(f"type: {type(expanded_queries)}")
     return expanded_queries

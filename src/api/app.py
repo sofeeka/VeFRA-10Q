@@ -147,7 +147,7 @@ async def generate(
         db = get_user_knowledge_base(user_id=user_id)
         rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
         answer, _ = await answer_query(
-            query=query,
+            input_query=query,
             db=db,
             generator=rag_generator,
         )
@@ -202,7 +202,7 @@ async def debug_generate(
         db = get_user_knowledge_base(user_id=user_id)
         rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
         answer, _ = await answer_query(
-            query=query,
+            input_query=query,
             db=db,
             generator=rag_generator,
         )

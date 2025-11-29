@@ -105,7 +105,7 @@ async def _evaluate_single_question(
 
     try:
         rag_response, retrieved_chunks_list = await answer_query(
-            query=question_data.query,
+            input_query=question_data.query,
             db=db,
             generator=rag_generator,
         )

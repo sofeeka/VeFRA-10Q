@@ -260,7 +260,7 @@ class UserKnowledgeBase:
 
         return search_results
 
-    async def get_related_chunks(
+    async def get_related_points(
         self,
         query: str,
         limit: int = DEFAULT_SEARCH_K,
