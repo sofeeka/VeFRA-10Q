@@ -149,8 +149,8 @@
         {% endif %}
 
         <h2>Retrieved Chunks</h2>
-        {% if debug_data.chunks %}
-        {% for chunk in debug_data.chunks %}
+        {% if debug_data.unique_retrieved_chunks %}
+        {% for chunk in debug_data.unique_retrieved_chunks %}
         <div class="chunk-card">
             <div class="chunk-meta">
                 <span class="chunk-tag">#{{ loop.index }}</span>
@@ -164,16 +164,35 @@
         <div class="empty-state">No chunks retrieved.</div>
         {% endif %}
 
-        <h2>Expanded Queries</h2>
+        <h2>Expanded Queries & Retrieved Chunks</h2>
+
         {% if debug_data.expanded_queries %}
-        {% for query in debug_data.expanded_queries %}
-        <div class="chunk-card">
-            <div class="chunk-text">{{ query.query }}</div>
+        {% for query_obj in debug_data.expanded_queries %}
+
+        <div class="query-group" style="margin-bottom: 30px;">
+
+            <h3 style="margin-bottom: 10px;">Query: "{{ query_obj.query }}"</h3>
+
+            {% if query_obj.chunks %}
+            {% for chunk in query_obj.chunks %}
+            <div class="chunk-card">
+                <div class="chunk-meta">
+                    <span class="chunk-tag">#{{ loop.index }}</span>
+                    <span class="chunk-tag">Year: {{ chunk.document.year }}</span>
+                    <span class="chunk-tag">Quarter: {{ chunk.document.quarter }}</span>
+                </div>
+                <div class="chunk-text">{{ chunk.text }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state">No chunks retrieved for this query.</div>
+            {% endif %}
+
         </div>
-        {% endfor %}
+        <hr> {% endfor %}
         {% else %}
-        <div class="empty-state">No expanded queries.</div>
-        {% endif %}
+        <div class="empty-state">No expanded queries found.</div>
+        {%endif %}
     </div>
 </body>
 
