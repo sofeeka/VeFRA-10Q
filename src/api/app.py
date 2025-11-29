@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -11,11 +12,12 @@ from starlette.requests import Request
 from src.api.input_validation import get_existing_user, validate_user_id
 from src.api.service import process_document_ingestion
 from src.data_models.api import FileUploadModel
+from src.debug.debug import debug_manager
 from src.evaluation.rag_evaluator import run_evaluation
 from src.pipeline.query_answering import answer_query
 from src.scripts.logging_config import setup_logging
 from src.scripts.setup_database import setup_database
-from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL
+from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL, PROJECT_ROOT_PATH
 from src.utils.dependency import (
     get_async_generator,
     get_reranking_model,
@@ -39,6 +41,34 @@ app = FastAPI(
     description="API to accept PDF documents.",
     lifespan=lifespan,
 )
+
+templates = Jinja2Templates(directory=PROJECT_ROOT_PATH / "src" / "api" / "templates")
+
+
+def client_wants_html(request: Request) -> bool:
+    accept = request.headers.get("accept", "")
+    return "text/html" in accept.lower()
+
+
+@app.exception_handler(VeFRAException)
+async def global_exception_handler(request: Request, e: VeFRAException):
+    logger.exception(e.message)
+
+    # If the client wants HTML → render error.html
+    if client_wants_html(request):
+        response = templates.TemplateResponse(
+            request=request,
+            name="error.html",
+            context={"error": e},
+            status_code=e.status_code,
+        )
+        response.body  # force rendering NOW so errors get caught
+        return response
+
+    # Otherwise return JSON error
+    return JSONResponse(
+        {"detail": e.message, "fromExceptionHandler": True}, status_code=e.status_code
+    )
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -104,7 +134,7 @@ async def create_upload_file(
         raise HTTPException(status_code=500, detail="Internal server error.") from e
 
 
-@app.post("/{user_id}/generate/")
+@app.get("/{user_id}/generate/")
 async def generate(
     query: str,
     user_id: str = Depends(get_existing_user),
@@ -151,7 +181,50 @@ async def generate(
         ) from e
 
 
-@app.post("/{user_id}/evaluate/")
+@app.get("/{user_id}/debug_generate/")
+async def debug_generate(
+    request: Request,
+    query: str,
+    user_id: str = Depends(get_existing_user),
+):
+    """
+    Generates the response to user question using user's knowledge base.
+    """
+
+    try:
+        debug_manager.enable()
+        debug_manager.clear_data()
+
+        debug_data = debug_manager.get_data()
+        debug_data.user = user_id
+        debug_data.question = query
+
+        db = get_user_knowledge_base(user_id=user_id)
+        rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
+        answer, _ = await answer_query(
+            query=query,
+            db=db,
+            generator=rag_generator,
+        )
+
+        debug_data.answer = answer
+
+        response = templates.TemplateResponse(
+            "debug.html",
+            {
+                "request": request,
+                "debug_data": debug_data,
+            },
+        )
+
+        response.body  # force early rendering
+        return response
+
+    finally:
+        debug_manager.disable()
+
+
+@app.get("/{user_id}/evaluate/")
 async def evaluate(user_id: str = Depends(get_existing_user)):
     """
     Runs the evaluation of the RAG system.
