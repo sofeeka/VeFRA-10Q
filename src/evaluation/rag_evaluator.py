@@ -12,10 +12,9 @@ from src.data_models.evaluation import (
     EvaluationQuestion,
     EvaluationResult,
 )
-from src.generation.async_generator import AsyncGenerator
+from src.debug.debug import debug_manager
 from src.generation.prompts import EVALUATION_SYSTEM_PROMPT
-from src.pipeline.query_answering import answer_query
-from src.retrieval.database import UserKnowledgeBase
+from src.pipeline.query_answering import QueryAnsweringPipeline
 from src.utils.config import (
     EVALUATION_CONCURRENCY_LIMIT,
     EVALUATION_MODEL,
@@ -85,9 +84,8 @@ def _save_single_result(session_filepath: Path, result: EvaluationResult):
 
 async def _evaluate_single_question(
     question_data: EvaluationQuestion,
-    db: UserKnowledgeBase,
-    rag_generator: AsyncGenerator,
     metrics_evaluator: MetricsEvaluator,
+    pipeline: QueryAnsweringPipeline,
 ) -> EvaluationResult:
     logger.info(f"Starting evaluation for question_id: {question_data.question_id}")
 
@@ -104,11 +102,15 @@ async def _evaluate_single_question(
     )
 
     try:
-        rag_response, retrieved_chunks_list = await answer_query(
-            input_query=question_data.query,
-            db=db,
-            generator=rag_generator,
-        )
+        debug_manager.enable()
+        debug_manager.clear_data()
+
+        debug_data = debug_manager.get_data()
+        debug_data.user = pipeline.db.user_id
+        debug_data.question = question_data.query
+
+        rag_response = await pipeline.run(question_data.query)
+        retrieved_chunks_list = debug_data.final_retrieved_chunks
         full_context = "\n---\n".join(retrieved_chunks_list)
 
         current_result.rag_response = rag_response
@@ -179,6 +181,8 @@ async def _evaluate_single_question(
             f"Unhandled exception for question {question_data.question_id}: {e}",
             exc_info=True,
         )
+    finally:
+        debug_manager.disable()
 
     return current_result
 
@@ -235,14 +239,14 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
         logger.info("No remaining questions to evaluate. Session is already complete.")
     else:
         semaphore = asyncio.Semaphore(EVALUATION_CONCURRENCY_LIMIT)
+        pipeline = QueryAnsweringPipeline(db=db, generator=rag_async_generator)
 
         async def evaluate_and_save(q_data: EvaluationQuestion) -> EvaluationResult:
             async with semaphore:
                 result = await _evaluate_single_question(
                     question_data=q_data,
-                    db=db,
-                    rag_generator=rag_async_generator,
                     metrics_evaluator=metrics_evaluator,
+                    pipeline=pipeline,
                 )
                 _save_single_result(session_filepath, result)
                 return result

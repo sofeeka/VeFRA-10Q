@@ -14,7 +14,7 @@ from src.api.service import process_document_ingestion
 from src.data_models.api import FileUploadModel
 from src.debug.debug import debug_manager
 from src.evaluation.rag_evaluator import run_evaluation
-from src.pipeline.query_answering import answer_query
+from src.pipeline.query_answering import QueryAnsweringPipeline
 from src.scripts.logging_config import setup_logging
 from src.scripts.setup_database import setup_database
 from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL, PROJECT_ROOT_PATH
@@ -142,15 +142,12 @@ async def generate(
     """
     Generates the response to user question using user's knowledge base.
     """
-
+    query_answering_pipeline = QueryAnsweringPipeline(
+        db=get_user_knowledge_base(user_id=user_id),
+        generator=get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL),
+    )
     try:
-        db = get_user_knowledge_base(user_id=user_id)
-        rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
-        answer, _ = await answer_query(
-            input_query=query,
-            db=db,
-            generator=rag_generator,
-        )
+        answer = await query_answering_pipeline.run(query=query)
         return JSONResponse(
             content={
                 "answer": answer,
@@ -199,13 +196,12 @@ async def debug_generate(
         debug_data.user = user_id
         debug_data.question = query
 
-        db = get_user_knowledge_base(user_id=user_id)
-        rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
-        answer, _ = await answer_query(
-            input_query=query,
-            db=db,
-            generator=rag_generator,
+        query_answering_pipeline = QueryAnsweringPipeline(
+            db=get_user_knowledge_base(user_id=user_id),
+            generator=get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL),
         )
+
+        answer = await query_answering_pipeline.run(query=query)
 
         debug_data.answer = answer
 

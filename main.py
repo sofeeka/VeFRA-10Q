@@ -1,7 +1,6 @@
 import asyncio
 
-from src.pipeline.query_answering import answer_query
-from src.retrieval.database import UserKnowledgeBase
+from src.pipeline.query_answering import QueryAnsweringPipeline
 from src.scripts.setup_database import setup_database
 from src.utils.config import (
     MAIN_RESPONSE_GENERATION_MODEL,
@@ -14,12 +13,15 @@ async def main():
     await setup_database()
 
     user_id = "msft"
-    db: UserKnowledgeBase = get_user_knowledge_base(user_id=user_id)
 
     query = "In Q1 2023, how did Microsoft's operating expenses measure up against its revenue?"
-    rag_generator = get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL)
 
-    answer, _ = await answer_query(input_query=query, db=db, generator=rag_generator)
+    query_answering_pipeline = QueryAnsweringPipeline(
+        db=get_user_knowledge_base(user_id=user_id),
+        generator=get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL),
+    )
+
+    answer = await query_answering_pipeline.run(query=query)
     print(answer)
 
 

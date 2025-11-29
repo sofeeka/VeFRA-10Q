@@ -25,6 +25,7 @@ class DebugData:
         self.unique_retrieved_chunks: list[DebugData_Chunk] = []
         self.expanded_queries: list[DebugData_ExpandedQuery] = []
         self.retrieved_chunks_per_query: dict[str, list[DebugData_Chunk]] = {}
+        self.final_retrieved_chunks: list[str] = []
 
     def add_document(self, quarter: str, year: str):
         document = DebugData_Document(
