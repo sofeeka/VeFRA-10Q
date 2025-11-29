@@ -1,25 +1,19 @@
 class DebugData_Document:
-    quarter: str
-    year: str
-
-    def __init__(self):
-        self.quarter = ""
-        self.year = ""
+    def __init__(self, quarter: str, year: str):
+        self.quarter = quarter
+        self.year = year
 
 
 class DebugData_Chunk:
-    text: str
-    document: DebugData_Document
-
-    def __init__(self):
-        self.text = ""
-        self.document = DebugData_Document()
+    def __init__(self, text: str, document: DebugData_Document):
+        self.text = text
+        self.document = document
 
 
 class DebugData_ExpandedQuery:
-    def __init__(self, query: str):
+    def __init__(self, query: str, chunks: list[DebugData_Chunk]):
         self.query = query
-        # self.chunks: list[str] = []
+        self.chunks = chunks
 
 
 class DebugData:
@@ -28,26 +22,34 @@ class DebugData:
         self.question: str = ""
         self.answer: str = ""
         self.documents: list[DebugData_Document] = []
-        self.chunks: list[DebugData_Chunk] = []
+        self.unique_retrieved_chunks: list[DebugData_Chunk] = []
         self.expanded_queries: list[DebugData_ExpandedQuery] = []
+        self.retrieved_chunks_per_query: dict[str, list[DebugData_Chunk]] = {}
 
-    def add_document(self, quarter, year):
-        document = DebugData_Document()
-        document.quarter = quarter
-        document.year = year
-
+    def add_document(self, quarter: str, year: str):
+        document = DebugData_Document(
+            quarter=quarter,
+            year=year,
+        )
         self.documents.append(document)
 
-    def add_chunk(self, text, quarter, year):
-        chunk = DebugData_Chunk()
-        chunk.text = text
-        chunk.document.quarter = quarter
-        chunk.document.year = year
+    def add_unique_retrieved_chunk(self, text: str, quarter: str, year: str):
+        chunk = DebugData_Chunk(
+            text=text,
+            document=DebugData_Document(
+                quarter=quarter,
+                year=year,
+            ),
+        )
+        self.unique_retrieved_chunks.append(chunk)
 
-        self.chunks.append(chunk)
-
-    def add_expanded_query(self, query):
-        self.expanded_queries.append(DebugData_ExpandedQuery(query=query))
+    def add_expanded_query(self, query: str, chunks: list[DebugData_Chunk]):
+        self.expanded_queries.append(
+            DebugData_ExpandedQuery(
+                query=query,
+                chunks=chunks,
+            )
+        )
 
 
 class DebugManager:

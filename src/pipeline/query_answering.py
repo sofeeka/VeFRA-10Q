@@ -1,7 +1,7 @@
 from loguru import logger
 
 from src.data_models.retrieval import DocumentMetadata
-from src.debug.debug import debug_manager
+from src.debug.debug import DebugData_Chunk, DebugData_Document, debug_manager
 from src.generation.async_generator import AsyncGenerator
 from src.pipeline.query_expansion import expand_query
 from src.pipeline.relevant_docs_extractor import get_relevant_docs
@@ -53,7 +53,6 @@ async def answer_query(
     query: str,
     db: UserKnowledgeBase,
     generator: AsyncGenerator,
-    debug: bool = False,
 ) -> tuple[str, list[str]]:
     """
     Answers a user query based on the documents in the Qdrant database.
@@ -74,7 +73,7 @@ async def answer_query(
     if debug_manager.is_enabled():
         debug_data = debug_manager.get_data()
         for doc in relevant_docs_metadata:
-            debug_data.add_document(doc.quarter, doc.year)
+            debug_data.add_document(quarter=doc.quarter, year=doc.year)
 
     # Perform query expansion
     expanded_queries: list[str] = await expand_query(query=query)
@@ -82,32 +81,30 @@ async def answer_query(
 
     # Retrieve chunks for each query
     all_retrieved_points = []
-    # retrieved_chunks_per_query = {}
 
     for exp_query in expanded_queries:
-        if debug_manager.is_enabled():
-            debug_manager.get_data().add_expanded_query(query=exp_query)
-
         retrieved_points = await db.get_related_chunks(
             query=exp_query,
             doc_metadata_filter=relevant_docs_metadata,
         )
 
-        # if debug:
-        #     retrieved_chunks_per_query[exp_query] = [
-        #         RetrievedChunkDebug(
-        #             id=p.id,
-        #             text=p.payload.get("text", ""),
-        #             score=p.score,
-        #             metadata=p.payload.get("metadata", {}),
-        #         )
-        #         for p in retrieved_points
-        #     ]
+        if debug_manager.is_enabled():
+            chunks_per_query: list[DebugData_Chunk] = []
+            for point in retrieved_points:
+                metadata = point.payload.get(
+                    "metadata", {"year": "N/A", "quarter": "N/A"}
+                )
+                year = metadata["year"]
+                quarter = metadata["quarter"]
+                chunk = DebugData_Chunk(
+                    text=point.payload["text"],
+                    document=DebugData_Document(year=year, quarter=quarter),
+                )
+                chunks_per_query.append(chunk)
+
+            debug_data.add_expanded_query(query=exp_query, chunks=chunks_per_query)
 
         all_retrieved_points.extend(retrieved_points)
-
-    # if debug:
-    #     debug_data["retrieved_chunks_per_query"] = retrieved_chunks_per_query
 
     logger.info(
         "Retrieved {chunk_count} chunks from database.",
@@ -120,15 +117,8 @@ async def answer_query(
             "No chunks found after retrieval, possibly due to document filtering.",
             relevant_docs_metadata=relevant_docs_metadata,
         )
-        if debug:
-            debug_data["unique_retrieved_chunks"] = []
-            debug_data["reranked_chunks"] = []
-            debug_data["final_system_prompt"] = "N/A - No chunks found"
-            debug_data["final_user_prompt"] = "N/A - No chunks found"
-            debug_data["final_llm_answer"] = (
-                "I could not find any information relevant to your question. Try to rephrase it and be more specific with dates and years."
-            )
 
+        # TODO add debug data before returning
         return (
             "I could not find any information relevant to your question. Try to rephrase it and be more specific with dates and years.",
             [],
@@ -155,7 +145,9 @@ async def answer_query(
         )
 
         if debug_manager.is_enabled():
-            debug_manager.get_data().add_chunk(rebuilt_chunk, quarter, year)
+            debug_manager.get_data().add_unique_retrieved_chunk(
+                rebuilt_chunk, quarter, year
+            )
 
         final_rebuilt_chunks.append(rebuilt_chunk)
 
@@ -184,9 +176,6 @@ Content:
         )
         reranked_chunks = final_rebuilt_chunks[:10]
 
-    if debug:
-        debug_data["reranked_chunks"] = reranked_chunks
-
     # Format the context
     context: str = format_for_prompt(reranked_chunks)
 
@@ -199,10 +188,6 @@ Content:
     ---
     Question: {query}
     """
-
-    if debug:
-        debug_data["final_system_prompt"] = generator.system_prompt
-        debug_data["final_user_prompt"] = user_prompt
 
     # Generate answer
     try:
