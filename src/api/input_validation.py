@@ -1,8 +1,9 @@
 import re
 
-from fastapi import Depends, HTTPException, Path
+from fastapi import Depends, Path
 
 from src.utils.config import get_user_sources_folder
+from src.utils.exceptions import VeFRA_DataValidationError
 
 VALID_USER_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 
@@ -20,9 +21,8 @@ async def validate_user_id(
     """
 
     if not VALID_USER_ID_PATTERN.match(user_id):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid user_id format '{user_id}'. "
+        raise VeFRA_DataValidationError(
+            f"Invalid user_id format '{user_id}'. "
             "Only alphanumeric characters, hyphens, and underscores are allowed.",
         )
 
@@ -35,8 +35,8 @@ async def get_existing_user(user_id: str = Depends(validate_user_id)) -> str:
     Dependency that validates user_id format and ensures the user exists.
     """
     if not _user_exists_in_file_system(user_id=user_id):
-        raise HTTPException(
-            status_code=404, detail=f"User with id '{user_id}' not found."
+        raise VeFRA_DataValidationError(
+            f"User with id '{user_id}' not found.",
         )
     return user_id
 
