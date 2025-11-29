@@ -16,7 +16,7 @@ async def expand_query(query: str) -> list[str]:
     response = await generator.generate_response(
         prompt=query, text_format=QueryExpansionModel
     )
-    logger.debug("Query expansion response received.", response=response)
+    logger.debug("Query expansion response received.", response=response.model_dump())
 
     logger.debug("Extracting expanded queries...")
     expanded_queries = response.output_parsed.queries
