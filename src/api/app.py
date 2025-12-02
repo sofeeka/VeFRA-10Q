@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from contextlib import asynccontextmanager
 
@@ -10,8 +11,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from src.api.input_validation import get_existing_user, validate_user_id
-from src.api.service import process_document_ingestion
-from src.data_models.api import FileUploadModel
+from src.api.service import process_csv_upload, process_document_ingestion
+from src.data_models.api import CSVUploadModel, FileUploadModel
 from src.debug.debug import debug_manager
 from src.evaluation.rag_evaluator import run_evaluation
 from src.pipeline.query_answering import QueryAnsweringPipeline
@@ -302,3 +303,107 @@ async def evaluate(user_id: str = Depends(get_existing_user)):
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Internal server error.") from e
+
+
+@app.post("/{user_id}/evaluate_file/")
+async def evaluate_file(
+    user_id: str = Depends(get_existing_user),
+    file: UploadFile = File(...),
+):
+    """
+    Runs the evaluation of the RAG system.
+    """
+    csv_filepath = None
+    temp_filepath = None
+    try:
+        if file:
+            # Validate and process uploaded CSV
+            model = CSVUploadModel(file=file, user_id=user_id)
+            # Save to temporary file
+            temp_filepath = await process_csv_upload(model, is_temporary=True)
+            csv_filepath = temp_filepath
+
+        df = await run_evaluation(user_id=user_id, csv_filepath=csv_filepath)
+
+        n_total = len(df)
+        n_successful = df[df["evaluation_status"] == "SUCCESS"].shape[0]
+
+        correctness_scores = df["answer_correctness_score"].dropna()
+        mean_correctness = (
+            correctness_scores.mean() if not correctness_scores.empty else -1.0
+        )
+
+        groundedness_scores = df["groundedness_score"].dropna()
+        mean_groundedness = (
+            groundedness_scores.mean() if not groundedness_scores.empty else -1.0
+        )
+
+        context_coverage_scores = df["context_coverage_score"].dropna()
+        mean_context_coverage = (
+            context_coverage_scores.mean()
+            if not context_coverage_scores.empty
+            else -1.0
+        )
+
+        numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
+        mean_numerical_accuracy = (
+            numerical_accuracy_scores.mean()
+            if not numerical_accuracy_scores.empty
+            else -1.0
+        )
+
+        all_chunk_relevance_scores = []
+        for _, row in df.iterrows():
+            if row["chunk_relevance_scores"] and row["evaluation_status"] == "SUCCESS":
+                # chunk_relevance_scores is a JSON string of list of LLMJudgeScore dicts
+                chunk_scores_list = json.loads(row["chunk_relevance_scores"])
+                question_chunk_scores = [
+                    s["score"]
+                    for s in chunk_scores_list
+                    if s and "score" in s and s["score"] is not None
+                ]
+                if question_chunk_scores:
+                    all_chunk_relevance_scores.extend(question_chunk_scores)
+
+        mean_chunk_relevance = (
+            sum(all_chunk_relevance_scores) / len(all_chunk_relevance_scores)
+            if all_chunk_relevance_scores
+            else 0.0
+        )
+
+        return JSONResponse(
+            content={
+                "total_questions": n_total,
+                "successful_evaluations": n_successful,
+                "mean_answer_correctness": round(mean_correctness, 2),
+                "mean_groundedness": round(mean_groundedness, 2),
+                "mean_context_coverage": round(mean_context_coverage, 2),
+                "mean_chunk_relevance": round(mean_chunk_relevance, 2),
+                "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
+            },
+            status_code=200,
+        )
+    except VeFRAException as e:
+        logger.error(
+            "VeFRA Exception caught during evaluation.",
+            e=e,
+            user_id=user_id,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=e.status_code, detail=e.message) from e
+    except Exception as e:
+        logger.error(
+            "Unhandled exception during evaluation.",
+            e=e,
+            user_id=user_id,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Internal server error.") from e
+    finally:
+        # Cleanup temporary file if it exists
+        if temp_filepath and os.path.exists(temp_filepath):
+            try:
+                os.remove(temp_filepath)
+                logger.info(f"Cleaned up temporary evaluation file: {temp_filepath}")
+            except OSError as e:
+                logger.warning(f"Failed to cleanup temporary file {temp_filepath}: {e}")

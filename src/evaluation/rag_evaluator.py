@@ -187,9 +187,15 @@ async def _evaluate_single_question(
     return current_result
 
 
-async def run_evaluation(user_id: str) -> pd.DataFrame:
+async def run_evaluation(
+    user_id: str, csv_filepath: str | Path | None = None
+) -> pd.DataFrame:
     """
     Runs the full evaluation pipeline concurrently.
+
+    Args:
+        user_id: The user ID to run evaluation for
+        csv_filepath: Optional path to uploaded CSV file. If not provided, uses default benchmarks.
     """
     logger.info(f"Starting evaluation run for user '{user_id}'.")
     start_time = datetime.datetime.now()
@@ -203,10 +209,17 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
 
     metrics_evaluator = MetricsEvaluator(generator=eval_async_generator)
 
-    if db.user_id == "msft":
-        benchmark = MSFT_BENCHMARK
+    # Determine which CSV file to use
+    if csv_filepath:
+        benchmark = Path(csv_filepath)
+        logger.info(f"Using uploaded CSV file: {benchmark}")
     else:
-        benchmark = NVDA_BENCHMARK
+        # Use default benchmarks based on user_id
+        if db.user_id == "msft":
+            benchmark = MSFT_BENCHMARK
+        else:
+            benchmark = NVDA_BENCHMARK
+        logger.info(f"Using default benchmark: {benchmark}")
 
     full_df = pd.read_csv(benchmark)
 

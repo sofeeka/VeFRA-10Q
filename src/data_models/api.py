@@ -115,3 +115,109 @@ class FileUploadModel(BaseModel):
 
         self.filepath = permanent_filepath
         return self
+
+
+class CSVUploadModel(BaseModel):
+    file: UploadFile
+    user_id: str
+
+    filepath: Path | str | None = None
+    processed_content: bytes | None = None
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def validate_user_id_format(cls, value: str) -> str:
+        """
+        Validates the format of the user_id.
+        """
+        if not (2 <= len(value) <= 10):
+            raise VeFRA_DataValidationError(
+                message=f"Invalid user_id '{value}'. ID must be between 2 and 10 characters long."
+            )
+        return value
+
+    @field_validator("file", mode="before")
+    @classmethod
+    def validate_file(cls, file: UploadFile):
+        """
+        Validates the uploaded file.
+        1. It must have a filename.
+        2. It must have a .csv extension.
+        """
+
+        filename = file.filename
+        if not filename:
+            raise VeFRA_DataValidationError("File has no filename.")
+
+        # file extension validation
+        if not filename.lower().endswith(".csv"):
+            raise VeFRA_UnsupportedFileTypeError(
+                "Invalid file type. Only .csv files are accepted.",
+            )
+
+        return file
+
+    @model_validator(mode="after")
+    def validate_csv_structure(self) -> "CSVUploadModel":
+        """
+        Validates the CSV file structure after basic validation.
+
+        1. File must contain required columns: 'Question Id', 'Question', 'Ground Truth Answer'
+        2. File must not be empty
+        """
+        from io import StringIO
+
+        import pandas as pd
+
+        try:
+            content = self.file.file.read()
+            self.file.file.seek(0)
+
+            csv_content = content.decode("utf-8")
+            df = pd.read_csv(StringIO(csv_content))
+
+            if "Question Id" not in df.columns:
+                df["Question Id"] = range(1, len(df) + 1)
+
+            strict_required_cols = ["Question", "Ground Truth Answer"]
+            missing_cols = [
+                col for col in strict_required_cols if col not in df.columns
+            ]
+
+            if missing_cols:
+                raise VeFRA_DataValidationError(
+                    f"CSV file is missing required columns: {missing_cols}. "
+                    f"Required columns are: {strict_required_cols} (Question Id is optional)"
+                )
+            if df.empty:
+                raise VeFRA_DataValidationError(
+                    "CSV file is empty. Please provide a file with evaluation questions."
+                )
+            df_clean = df.dropna(subset=strict_required_cols)
+            if len(df_clean) < len(df):
+                logger.warning(
+                    f"CSV file contains {len(df) - len(df_clean)} rows with missing required data. "
+                    "These rows will be skipped during evaluation."
+                )
+
+            if df_clean.empty:
+                raise VeFRA_DataValidationError(
+                    "CSV file contains no valid rows. All rows are missing required data."
+                )
+
+            # Store processed content
+            self.processed_content = df_clean.to_csv(index=False).encode("utf-8")
+
+        except UnicodeDecodeError:
+            raise VeFRA_DataValidationError(
+                "Unable to decode CSV file. Please ensure the file is UTF-8 encoded."
+            )
+        except pd.errors.ParserError as e:
+            raise VeFRA_DataValidationError(f"Unable to parse CSV file: {str(e)}")
+        except Exception as e:
+            if isinstance(e, VeFRA_DataValidationError):
+                raise
+            logger.error(f"Unexpected error validating CSV file: {e}", exc_info=True)
+            raise VeFRA_DataValidationError(f"Error validating CSV file: {str(e)}")
+
+        return self
