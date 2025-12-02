@@ -27,29 +27,32 @@ Evaluation Principles:
 When evaluating, focus on substance over style. A response with correct financial data presented clearly is superior to one with eloquent language but factual errors.
 """
 
-QUESTION_VALIDITY_PROMPT = """\\
-You are an expert assistant that determines if a user's question is relevant to Form 10-Q financial documents.
+QUESTION_VALIDITY_PROMPT = """\
+You are an expert financial analyst assistant. Your task is to classify whether a user's question can be answered using a Form 10-Q document.
 
-Form 10-Qs cover:
-- Financial statements (revenue, expenses, assets, liabilities, cash flows)
-- Risk factors
-- Legal proceedings
-- Management's discussion and analysis (MD&A)
-- Notes to consolidated financial statements
-- Business operations and performance
+**Understanding Form 10-Q Content:**
+Form 10-Qs are not just about numbers. They contain extensive text regarding:
+1.  **Financials:** Revenue, EPS, balance sheets, cash flow, GAAP vs. Non-GAAP.
+2.  **Risk Factors:** Geopolitical tensions, **supply chain issues**, **government regulations**, export controls, inflation, and market volatility.
+3.  **Operations:** New product launches, restructuring, divestitures, and strategic shifts.
+4.  **Legal & Regulatory:** Lawsuits, settlements, and new laws (e.g., tax changes, environmental laws, trade restrictions) affecting the company.
 
-Form 10-Qs do NOT cover:
-- Detailed executive compensation (found in Proxy Statements)
-- Non-business topics (weather, general knowledge, personal matters)
-- Topics completely unrelated to financial reporting
+**Classification Rules:**
 
-Your task is to determine if the question is RELEVANT or IRRELEVANT to 10-Q documents.
+**LABEL: RELEVANT**
+- Any question asking about the company's performance, health, risks, or strategy.
+- Questions regarding **external factors** (wars, laws, trade bans) *if* they relate to the company's business environment.
+- Questions specifically referencing a time period (e.g., "Q3 2022", "Last quarter").
+- **CRITICAL:** If the question implies a lookup of facts contained within the text of the report (even if not strictly a number), mark it RELEVANT.
 
-**RELEVANT**: The question asks about financial information, business performance, risks, legal matters, or other topics typically found in a 10-Q filing.
-- Examples: "What was the revenue in Q2 2023?", "What are the risk factors?", "How much cash do they have?", "Are they being sued?"
+**LABEL: IRRELEVANT**
+- Questions about general world knowledge unconnected to the company (e.g., "Who is the President of France?", "What is the capital of China?").
+- Conversational chitchat (e.g., "Hello", "How are you?").
+- Questions specifically asking for data ONLY found in a Proxy Statement (e.g., specific breakdown of CEO's personal stock options) or purely technical coding questions.
 
-**IRRELEVANT**: The question is about topics not covered in 10-Q documents or is completely unrelated to financial reporting.
-- Examples: "What's the weather?", "What is the CEO's annual salary?" (this is in Proxy Statement, not 10-Q)
+**Guidance:**
+- Be lenient. If a question falls into a "grey area" (e.g., a specific law), assume it might be mentioned in the "Risk Factors" or "MD&A" section and mark it **RELEVANT**.
+- Do not mark a question IRRELEVANT just because it sounds "political" or "legal." These are core components of financial reporting.
 
 Respond using ONLY the JSON format: {"validity": "RELEVANT"} or {"validity": "IRRELEVANT"}
 """
