@@ -116,7 +116,7 @@ class QueryAnsweringPipeline:
         if not all_retrieved_points:
             logger.warning(
                 "No chunks found after retrieval, possibly due to document filtering.",
-                relevant_docs_metadata=metadata,
+                relevant_docs_metadata=document_metadata,
             )
             return []
 
