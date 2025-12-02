@@ -7,7 +7,7 @@ from src.generation.prompts import (
 )
 from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
 from src.utils.dependency import get_async_generator
-from src.utils.exceptions import VeFRA_GenerationError, VeFRA_MetadataExtractionError
+from src.utils.exceptions import VeFRA_MetadataExtractionError
 
 FILENAME_PATTERN = re.compile(r"(\d{4})[\s_-]+(Q[1-3])", re.IGNORECASE)
 
@@ -56,19 +56,6 @@ async def get_relevant_docs(
         question=question, user_id=user_id
     )
 
-    if output.status != "success":  # == "failure"
-        if output.intent == Intent.IRRELEVANT_QUESTION:
-            raise VeFRA_GenerationError(
-                f"This system is designed to assist people with financial analysis. Question {question} is irrelevant."
-            )
-        elif output.intent == Intent.WRONG_Q_FALLBACK:
-            raise VeFRA_GenerationError(
-                f"WRONG Q FALLBACK triggered for question {question}"
-            )
-        else:
-            raise
-
-    # at this point status == "success"
     match output.intent:
         case Intent.SPECIFIC_TIME:
             # all documents should already be available

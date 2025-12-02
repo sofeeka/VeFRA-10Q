@@ -1,14 +1,20 @@
 from loguru import logger
 from qdrant_client.conversions.common_types import ScoredPoint
 
-from src.data_models.retrieval import DocumentMetadata
+from src.data_models.retrieval import (
+    DocumentMetadata,
+    QuestionValidity,
+    QuestionValidityModel,
+)
 from src.debug.debug import DebugData_Chunk, DebugData_Document, debug_manager
 from src.generation.async_generator import AsyncGenerator
+from src.generation.prompts import QUESTION_VALIDITY_PROMPT
 from src.pipeline.query_expansion import expand_query
 from src.pipeline.relevant_docs_extractor import get_relevant_docs
 from src.processing.document_processor import process_chunk_after_retrieval
 from src.retrieval.database import UserKnowledgeBase
-from src.utils.dependency import get_reranking_model
+from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL
+from src.utils.dependency import get_async_generator, get_reranking_model
 from src.utils.exceptions import VeFRA_GenerationError
 
 
@@ -34,6 +40,31 @@ class QueryAnsweringPipeline:
         self.db = db
         self.generator = generator
         self.config = config
+
+    async def _check_question_validity(self, query: str) -> QuestionValidityModel:
+        """Check if the question is relevant to 10-Q documents."""
+        try:
+            generator = get_async_generator(
+                model=CHOOSING_RELEVANT_DOCUMENTS_MODEL,
+                system_prompt="",
+            )
+
+            response = await generator.generate_response(
+                prompt=QUESTION_VALIDITY_PROMPT + f"\n\nQuestion: {query}",
+                text_format=QuestionValidityModel,
+            )
+
+            logger.info(
+                f"Question validity check: {response.output_parsed.validity}",
+                query=query,
+            )
+            return response.output_parsed
+        except Exception:
+            logger.error(
+                "Failed to check question validity. Assuming question is relevant.",
+                exc_info=True,
+            )
+            return QuestionValidityModel(validity=QuestionValidity.IRRELEVANT)
 
     async def _extract_metadata(self, query: str) -> list[DocumentMetadata]:
         try:
@@ -175,6 +206,16 @@ Question: {query}
 
     async def run(self, query: str) -> str:
         logger.info(f"Running pipeline for query: {query}")
+
+        validity_result = await self._check_question_validity(query=query)
+
+        if validity_result.validity == QuestionValidity.IRRELEVANT:
+            logger.warning(f"Question marked as irrelevant: {query}")
+            return (
+                "I'm sorry, but your question appears to be outside the scope of 10-Q financial documents. "
+                "I can help you with questions about financial statements, risk factors, legal proceedings, "
+                "management's discussion and analysis, and other topics typically found in quarterly reports."
+            )
 
         metadata = []
         if self.config.document_extraction:

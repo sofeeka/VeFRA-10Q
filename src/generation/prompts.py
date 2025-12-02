@@ -27,8 +27,37 @@ Evaluation Principles:
 When evaluating, focus on substance over style. A response with correct financial data presented clearly is superior to one with eloquent language but factual errors.
 """
 
+QUESTION_VALIDITY_PROMPT = """\\
+You are an expert assistant that determines if a user's question is relevant to Form 10-Q financial documents.
+
+Form 10-Qs cover:
+- Financial statements (revenue, expenses, assets, liabilities, cash flows)
+- Risk factors
+- Legal proceedings
+- Management's discussion and analysis (MD&A)
+- Notes to consolidated financial statements
+- Business operations and performance
+
+Form 10-Qs do NOT cover:
+- Detailed executive compensation (found in Proxy Statements)
+- Non-business topics (weather, general knowledge, personal matters)
+- Topics completely unrelated to financial reporting
+
+Your task is to determine if the question is RELEVANT or IRRELEVANT to 10-Q documents.
+
+**RELEVANT**: The question asks about financial information, business performance, risks, legal matters, or other topics typically found in a 10-Q filing.
+- Examples: "What was the revenue in Q2 2023?", "What are the risk factors?", "How much cash do they have?", "Are they being sued?"
+
+**IRRELEVANT**: The question is about topics not covered in 10-Q documents or is completely unrelated to financial reporting.
+- Examples: "What's the weather?", "What is the CEO's annual salary?" (this is in Proxy Statement, not 10-Q)
+
+Respond using ONLY the JSON format: {"validity": "RELEVANT"} or {"validity": "IRRELEVANT"}
+"""
+
 CHOOSING_RELEVANT_DOCUMENTS_SYSTEM_PROMPT = """\
 You are an expert assistant for filtering Form 10-Q documents. You only work with Q1, Q2, and Q3 quarterly reports. There is no such thing as Q4 or anything else. Only Q1, Q2 and Q3.
+
+IMPORTANT: you do not work with fiscal years. You only work with the quarter and year mentioned in the question. You job is to extract the sets of quarters and years from the question.
 
 Mappings: 
 
@@ -38,58 +67,33 @@ the third quarter of YYYY, third quarter, Q3 -> Q3 YYYY
 
 Your goal is to identify the minimum set of documents required to answer the question. You assume any document you identify is available.
 
-Analyze the user's question and generate a JSON plan following the intructions below.
-1.  **First, Check for Failure Cases (Fallbacks):**
-    * **WRONG_Q_FALLBACK:** Is the question about Q4, or any other Q apart from Q1, Q2 or Q3?
-        * **Triggers:** "Q4", "Q5", "Q6" etc.
-        * If YES, you MUST respond with:
-            `{{"status": "failure", "intent": "WRONG_Q_FALLBACK", "needed_periods": null}}`
-        * **CRITICAL EXCEPTION:** "Q1", "Q2", "Q3" are NOT TRIGGERS. If you see this, proceed to Step 2.
-    * **IRRELEVANT_QUESTION:** Is the question irrelevant
-        * **EXAMPLE:** "What's the weather?" "What is someones annual salary?" It is irrelevant. If you see this, proceed to Step 2.
-        * **CRITICAL EXCEPTION:** Questions about "dividends" or "dividents per share" or "dividents per share declared" or other financial information are NOT irrelevant. If you see this, proceed to Step 2.
-* 10-Qs cover financials, risk factors, legal proceedings, and management's discussion.
-        * They do **not** cover detailed executive compensation (like a CEO's salary, which is in the Proxy Statement) or non-business-related topics.
-        * If YES, you MUST respond with:
-            `{{"status": "failure", "intent": "IRRELEVANT_QUESTION", "needed_periods": null}}`
+* **Specific Time:
+    ** If the question is about *explicit* financial timeframes that map directly to 10-Q reports.
+    * **Examples:** "Q2 2023", "compare Q1 2023 and Q1 2022", "compare Q1 2023 to the previous quarter"
+    * `intent` is "SPECIFIC_TIME".
+    * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
+    * **Mappings:** "the first quarter" -> Q1. "the second quarter" -> Q2. "the third quarter -> Q3. 
 
-2.  **If, and ONLY if, it is NOT a failure, Analyze for Success:**
-    * **Specific Time:
-        ** If the question is about *explicit* financial timeframes that map directly to 10-Q reports.
-        * **Examples:** "Q2 2023", "compare Q1 2023 and Q1 2022", "compare Q1 2023 to the previous quarter"
-        * `status` is "success".
-        * `intent` is "SPECIFIC_TIME".
-        * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
-        * **Mappings:** "the first quarter" -> Q1. "the second quarter" -> Q2. "the third quarter -> Q3. 
+* **Year-over-Year analysis:
+    ** If the question asks about a trend over time (e.g., "How has the revenue changed over the last year?", "Over the last N years...?"). This implies Year-over-Year analysis. You will be provided with the latest available document. You must parse the number of years (e.g., last two years means N=2) and you must generate a list of all required documents for this Y/Y comparison.
+    * **Examples:** If latest available document is "2022 Q3" and the question is "how has revenue changed over the last 2 years?", you must parse N=2 and calculate the required periods: ["2022 Q3", "2021 Q3", "2020 Q3"]
+    * `intent` is "SPECIFIC_TIME".
+    * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
 
-    * **Year-over-Year analysis:
-        ** If the question asks about a trend over time (e.g., "How has the revenue changed over the last year?", "Over the last N years...?"). This implies Year-over-Year analysis. You will be provided with the latest available document. You must parse the number of years (e.g., last two years means N=2) and you must generate a list of all required documents for this Y/Y comparison.
-        * **Examples:** If latest available document is "2022 Q3" and the question is "how has revenue changed over the last 2 years?", you must parse N=2 and calculate the required periods: ["2022 Q3", "2021 Q3", "2020 Q3"]
-        * `status` is "success".
-        * `intent` is "SPECIFIC_TIME".
-        * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
+* **Latest:** If the question is qualitative, no time period mentioned, and it is logical that a financial analyst asking a question would care most about the most recent available information.
+    * **Examples:** "How is the company doing?", "What are the current risk factors?", "What is the company's outlook?", "Summarize the legal proceedings.".
+    * `intent` is "LATEST_DOCUMENT".
+    * `needed_periods` MUST be `null`.
 
-    * **Latest:** If the question is qualitative, no time period mentioned, and it is logical that a financial analyst asking a question would care most about the most recent available information.
-        * **Examples:** "How is the company doing?", "What are the current risk factors?", "What is the company's outlook?", "Summarize the legal proceedings.".
-        * `status` is "success".
-        * `intent` is "LATEST_DOCUMENT".
-        * `needed_periods` MUST be `null`.
-
-    * **General Question:** If the question is qualitative and asks about a topic or event that could be in *any* document, not just the latest. This should be the last resort.
-        * **Examples:** "What is the status of the deal the company was discussing in September?", "Has the company ever mentioned 'Project Titan'?"
-        * `status` is "success".
-        * `intent` is "GENERAL_QUESTION".
-        * `needed_periods` MUST be `null`.
+* **General Question:** If the question is qualitative and asks about a topic or event that could be in *any* document, not just the latest. This should be the last resort.
+    * **Examples:** "What is the status of the deal the company was discussing in September?", "Has the company ever mentioned 'Project Titan'?"
+    * **Hint:** Words like Has the company ever done something, Has the company ever mentioned something, Has the company ever mentioned something, etc are indicators of a general question.
+    * `intent` is "GENERAL_QUESTION".
+    * `needed_periods` MUST be `null`.
 
 Respond using ONLY the JSON format described.
-
-Respond using ONE single JSON format.
-The JSON object must have a "status" field, which is either "success" or "failure".
-
-Example on success:
-{{"status": "success", "intent": "SPECIFIC_TIME", "needed_periods": ["2022 Q3", "2023 Q3"]}}
-Example on failure:
-{{"status": "failure", "intent": "IRRELEVANT_QUESTION", "needed_periods": []}}
+Example:
+{"intent": "SPECIFIC_TIME", "needed_periods": ["2022 Q3", "2023 Q3"]}
 """
 
 CHOOSING_RELEVANT_DOCUMENTS_PROMPT = """\

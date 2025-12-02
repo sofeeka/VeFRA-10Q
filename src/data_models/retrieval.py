@@ -1,21 +1,35 @@
 import uuid
 from enum import Enum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, model_validator
 
 
 class Intent(str, Enum):
-    WRONG_Q_FALLBACK = "WRONG_Q_FALLBACK"
-    IRRELEVANT_QUESTION = "IRRELEVANT_QUESTION"
     SPECIFIC_TIME = "SPECIFIC_TIME"
     GENERAL_QUESTION = "GENERAL_QUESTION"
     LATEST_DOCUMENT = "LATEST_DOCUMENT"
 
 
+class QuestionValidity(str, Enum):
+    RELEVANT = "RELEVANT"
+    IRRELEVANT = "IRRELEVANT"
+
+
+class QuestionValidityModel(BaseModel):
+    """
+    Model for checking if a question is relevant to 10-Q documents.
+    """
+
+    validity: QuestionValidity
+
+
 class RelevantDocumentsModel(BaseModel):
-    status: Literal["success", "failure"]
-    intent: Intent | None = None
+    """
+    Model for metadata extraction from input query.
+    """
+
+    intent: Intent
     needed_periods: Annotated[list[str], Field(min_length=1)] | None = None
 
     @model_validator(mode="after")
@@ -23,32 +37,19 @@ class RelevantDocumentsModel(BaseModel):
         """
         Does a final check that the combination of fields and values is valid.
         """
-        if self.status == "failure":
-            if self.intent not in [Intent.IRRELEVANT_QUESTION, Intent.WRONG_Q_FALLBACK]:
+
+        if self.intent == Intent.SPECIFIC_TIME:
+            if not self.needed_periods:
                 raise ValueError(
-                    f"For a 'failure' status, intent must be IRRELEVANT_QUESTION or WRONG_Q_FALLBACK, not {self.intent}"
+                    "For intent SPECIFIC_TIME, 'needed_periods' must be provided."
                 )
+        elif self.intent in [Intent.GENERAL_QUESTION, Intent.LATEST_DOCUMENT]:
             if self.needed_periods:
                 raise ValueError(
-                    f"For a 'failure' status, 'needed_periods' must be null or empty, not {self.needed_periods}"
+                    f"For intent {self.intent}, 'needed_periods' must be null or empty."
                 )
-
-        elif self.status == "success":
-            if self.intent == Intent.SPECIFIC_TIME:
-                if not self.needed_periods:
-                    raise ValueError(
-                        "For a 'success' status with intent SPECIFIC_TIME, 'needed_periods' must be provided."
-                    )
-            elif self.intent in [Intent.GENERAL_QUESTION, Intent.LATEST_DOCUMENT]:
-                if self.needed_periods:
-                    raise ValueError(
-                        f"For a 'success' status with intent {self.intent}, 'needed_periods' must be null or empty."
-                    )
-            else:
-                # This case catches if intent is None or an invalid enum for a success status
-                raise ValueError(
-                    f"Invalid intent '{self.intent}' for a 'success' status."
-                )
+        else:
+            raise ValueError(f"Invalid intent '{self.intent}'.")
 
         return self
 
