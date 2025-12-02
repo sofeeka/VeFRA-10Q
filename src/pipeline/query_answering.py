@@ -144,7 +144,7 @@ class QueryAnsweringPipeline:
 
     async def _generate(self, chunks: list[str], query: str) -> str:
         if debug_manager.is_enabled():
-            debug_manager.get_data().all_retrieved_chunks = chunks
+            debug_manager.get_data().final_retrieved_chunks = chunks
 
         context = format_for_prompt(chunks)
         user_prompt: str = f"""
@@ -154,6 +154,10 @@ Context from 10-Q form:
 ---
 Question: {query}
 """
+
+        if debug_manager.is_enabled():
+            debug_manager.get_data().user_prompt = user_prompt
+            debug_manager.get_data().system_prompt = self.generator.system_prompt
 
         try:
             parsed_response = await self.generator.generate_response(prompt=user_prompt)
@@ -242,4 +246,5 @@ def format_for_prompt(ordered_chunks: list[str]) -> str:
     Helper to join chunks into a single string for the LLM prompt.
     Adds clear separators so the LLM knows where one chunk ends.
     """
-    return "\n\n---\n\n".join(ordered_chunks)
+    trimed_chunks = [chunk.strip() for chunk in ordered_chunks]
+    return "\n\n---\n\n".join(trimed_chunks)
