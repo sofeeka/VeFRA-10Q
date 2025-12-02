@@ -380,6 +380,7 @@ async def evaluate_file(
                 "mean_context_coverage": round(mean_context_coverage, 2),
                 "mean_chunk_relevance": round(mean_chunk_relevance, 2),
                 "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
+                "evaluation_results": df.to_dict(orient="records"),
             },
             status_code=200,
         )
