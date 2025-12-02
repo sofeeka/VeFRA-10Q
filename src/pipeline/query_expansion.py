@@ -13,7 +13,8 @@ async def expand_query(query: str) -> list[str]:
     logger.info(f"Expanding the query: {query}", query=query)
 
     generator = get_async_generator(
-        model=QUERY_EXPANSION_MODEL, system_prompt=QUERY_EXPANSION_SYSTEM_PROMPT
+        model=QUERY_EXPANSION_MODEL,
+        system_prompt=QUERY_EXPANSION_SYSTEM_PROMPT,
     )
 
     response = await generator.generate_response(
