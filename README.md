@@ -49,12 +49,12 @@ uvicorn src.api.app:app --reload
     *   Uploads a PDF file for a specific user, triggering the ingestion pipeline.
 
 *   **Generate Answer**
-    *   `POST /{user_id}/generate/`
+    *   `GET /{user_id}/generate/`
     *   Generates an answer to a query using the user's knowledge base.
     *   Query parameter: `query` (string)
 
 *   **Evaluate System**
-    *   `POST /{user_id}/evaluate/`
+    *   `GET /{user_id}/evaluate/`
     *   Runs the evaluation pipeline for the specified user.
 
 ## Development
