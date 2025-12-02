@@ -206,6 +206,9 @@ Question: {query}
 
     async def run(self, query: str) -> str:
         logger.info(f"Running pipeline for query: {query}")
+        import time
+
+        start_time = time.monotonic()
 
         validity_result = await self._check_question_validity(query=query)
 
@@ -241,6 +244,10 @@ Question: {query}
             reranked_chunks = rebuilt_chunks
 
         response = await self._generate(chunks=reranked_chunks, query=query)
+
+        duration = time.monotonic() - start_time
+        debug_manager.get_data().duration = f"{duration:.2f}"
+        logger.info(f"Pipeline completed in {duration:.2f} seconds.")
         return response
 
 

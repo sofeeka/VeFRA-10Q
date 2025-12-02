@@ -28,6 +28,7 @@ class DebugData:
         self.final_retrieved_chunks: list[str] = []
         self.system_prompt: str = ""
         self.use_prompt: str = ""
+        self.duration: float = 0.0
 
     def add_document(self, quarter: str, year: str):
         document = DebugData_Document(
@@ -65,9 +66,6 @@ class DebugManager:
 
     def enable(self):
         self._debug_mode = True
-        # Reset data when enabling? Or keep it?
-        # The original code created new data on get_debug_data if None.
-        # Let's ensure we have a fresh data object if we are enabling.
         if self._debug_data is None:
             self._debug_data = DebugData()
 
