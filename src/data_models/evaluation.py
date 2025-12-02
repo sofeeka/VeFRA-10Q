@@ -61,9 +61,7 @@ class EvaluationResult(BaseModel):
     context_coverage: LLMJudgeScore = Field(default_factory=LLMJudgeScore)
     chunk_relevance_scores: list[LLMJudgeScore] | None = None
 
-    numerical_accuracy: LLMJudgeScore = Field(
-        default_factory=LLMJudgeScore
-    )  # TODO think about it
+    numerical_accuracy: LLMJudgeScore = Field(default_factory=LLMJudgeScore)
 
     evaluation_status: str = "SUCCESS"  # SUCCESS, FAILED, SKIPPED
     error_message: str | None = None
