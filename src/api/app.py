@@ -15,7 +15,7 @@ from starlette.requests import Request
 from ..data_models.api import CSVUploadModel, FileUploadModel
 from ..debug.debug import debug_manager
 from ..evaluation.rag_evaluator import run_evaluation
-from ..pipeline.query_answering import QueryAnsweringPipeline
+from ..pipeline.query_answering import QueryAnsweringConfig, QueryAnsweringPipeline
 from ..scripts.logging_config import setup_logging
 from ..scripts.setup_database import setup_database
 from ..utils.config import MAIN_RESPONSE_GENERATION_MODEL, PROJECT_ROOT_PATH
@@ -100,6 +100,7 @@ app.add_middleware(LoggingMiddleware)
 @app.post("/{user_id}/uploadfile/")
 @limiter.limit("2/minute")
 async def create_upload_file(
+    request: Request,
     user_id: str = Depends(validate_user_id),
     file: UploadFile = File(...),
 ):
@@ -148,15 +149,27 @@ async def create_upload_file(
 @app.get("/{user_id}/generate/")
 @limiter.limit("5/minute")
 async def generate(
+    request: Request,
     query: str,
     user_id: str = Depends(get_existing_user),
+    document_extraction: bool = True,
+    query_expansion: bool = True,
+    reranking: bool = True,
 ):
     """
     Generates the response to user question using user's knowledge base.
     """
+
+    query_pipeline_config = QueryAnsweringConfig(
+        document_extraction=document_extraction,
+        query_expansion=query_expansion,
+        reranking=reranking,
+    )
+
     query_answering_pipeline = QueryAnsweringPipeline(
         db=get_user_knowledge_base(user_id=user_id),
         generator=get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL),
+        config=query_pipeline_config,
     )
     try:
         answer = await query_answering_pipeline.run(query=query)
@@ -196,6 +209,9 @@ async def debug_generate(
     request: Request,
     query: str,
     user_id: str = Depends(get_existing_user),
+    document_extraction: bool = True,
+    query_expansion: bool = True,
+    reranking: bool = True,
 ):
     """
     Generates the response to user question using user's knowledge base.
@@ -209,9 +225,16 @@ async def debug_generate(
         debug_data.user = user_id
         debug_data.question = query
 
+        query_pipeline_config = QueryAnsweringConfig(
+            document_extraction=document_extraction,
+            query_expansion=query_expansion,
+            reranking=reranking,
+        )
+
         query_answering_pipeline = QueryAnsweringPipeline(
             db=get_user_knowledge_base(user_id=user_id),
             generator=get_async_generator(model=MAIN_RESPONSE_GENERATION_MODEL),
+            config=query_pipeline_config,
         )
 
         answer = await query_answering_pipeline.run(query=query)
@@ -235,7 +258,10 @@ async def debug_generate(
 
 @app.get("/{user_id}/evaluate/")
 @limiter.limit("10/hour")
-async def evaluate(user_id: str = Depends(get_existing_user)):
+async def evaluate(
+    request: Request,
+    user_id: str = Depends(get_existing_user),
+):
     """
     Runs the evaluation of the RAG system.
     """
@@ -272,6 +298,7 @@ async def evaluate(user_id: str = Depends(get_existing_user)):
 @app.post("/{user_id}/evaluate_file/")
 @limiter.limit("10/hour")
 async def evaluate_file(
+    request: Request,
     user_id: str = Depends(get_existing_user),
     file: UploadFile = File(...),
 ):

@@ -218,7 +218,15 @@ Question: {query}
         start_time = time.monotonic()
 
         validity_task = self._check_question_validity(query=query)
-        expansion_task = self._expand_query(query=query)
+
+        if self.config.document_extraction:
+            expansion_task = self._expand_query(query=query)
+        else:
+
+            async def _empty_query_expansion(query: str):
+                return (query, [])
+
+            expansion_task = _empty_query_expansion(query=query)
 
         if self.config.document_extraction:
             metadata_task = self._extract_metadata(query=query)
