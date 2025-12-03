@@ -1,9 +1,10 @@
 import re
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import UploadFile
 from loguru import logger
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, field_validator, model_validator
 
 from ..evaluation.rag_evaluator import ground_truth_answer, question, question_id
 from ..utils.config import get_user_sources_filepath
@@ -15,26 +16,28 @@ from ..utils.exceptions import (
 )
 
 
+def validate_user_id_format(value: str) -> str:
+    """
+    Reusable validation logic.
+    """
+    if not (2 <= len(value) <= 10):
+        raise VeFRA_DataValidationError(
+            message=f"Invalid user_id '{value}'. ID must be between 2 and 10 characters long."
+        )
+    return value
+
+
+UserID = Annotated[str, AfterValidator(validate_user_id_format)]
+
+
 class FileUploadModel(BaseModel):
     file: UploadFile
-    user_id: str
+    user_id: UserID
 
     filepath: Path | str | None = None
     parsed_year: str | None = None
     parsed_quarter: str | None = None
     parsed_company: str | None = None
-
-    @field_validator("user_id", mode="before")
-    @classmethod
-    def validate_user_id_format(cls, value: str) -> str:
-        """
-        Validates the format of the user_id.
-        """
-        if not (2 <= len(value) <= 10):
-            raise VeFRA_DataValidationError(
-                message=f"Invalid user_id '{value}'. ID must be between 2 and 10 characters long."
-            )
-        return value
 
     @field_validator("file", mode="before")
     @classmethod
@@ -120,22 +123,10 @@ class FileUploadModel(BaseModel):
 
 class CSVUploadModel(BaseModel):
     file: UploadFile
-    user_id: str
+    user_id: UserID
 
     filepath: Path | str | None = None
     processed_content: bytes | None = None
-
-    @field_validator("user_id", mode="before")
-    @classmethod
-    def validate_user_id_format(cls, value: str) -> str:
-        """
-        Validates the format of the user_id.
-        """
-        if not (2 <= len(value) <= 10):
-            raise VeFRA_DataValidationError(
-                message=f"Invalid user_id '{value}'. ID must be between 2 and 10 characters long."
-            )
-        return value
 
     @field_validator("file", mode="before")
     @classmethod
