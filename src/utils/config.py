@@ -35,6 +35,7 @@ def get_user_evaluations_folder(user_id: str) -> Path:
 
 # chunking
 CHUNKING_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+MAX_SEQUENCE_LENGTH = 1024
 
 # embedding
 # DEFAULT_EMBEDDING_MODEL = "models/text-embedding-004" # google embedding

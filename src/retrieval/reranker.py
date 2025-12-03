@@ -2,12 +2,13 @@ import torch
 from loguru import logger
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from ..utils.config import MAX_SEQUENCE_LENGTH
+
 
 class FinancialReranker:
     def __init__(self, model_name: str):
         """
         Initializes a Cross-Encoder reranker using HuggingFace Transformers.
-        This removes the need for 'ragatouille' or 'langchain'.
         """
         logger.info(f"Loading Reranker model: {model_name}...")
 
@@ -65,7 +66,7 @@ class FinancialReranker:
                     padding=True,
                     truncation=True,
                     return_tensors="pt",
-                    max_length=8192,
+                    max_length=MAX_SEQUENCE_LENGTH,
                 ).to(self.device)
 
                 outputs = self.model(**inputs, return_dict=True)
