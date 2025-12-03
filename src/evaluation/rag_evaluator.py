@@ -138,14 +138,14 @@ async def _evaluate_single_question(
                 ground_truth_context=question_data.ground_truth_context,
                 full_context=full_context,
             ),
-            # "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
-            #     question_data.query, retrieved_chunks_list
-            # ),
-            # "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
-            #     query=question_data.query,
-            #     ground_truth_answer=question_data.ground_truth_answer,
-            #     rag_response=rag_response,
-            # ),
+            "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
+                question_data.query, retrieved_chunks_list
+            ),
+            "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
+                query=question_data.query,
+                ground_truth_answer=question_data.ground_truth_answer,
+                rag_response=rag_response,
+            ),
         }
 
         results = await asyncio.gather(*metric_tasks.values(), return_exceptions=True)
