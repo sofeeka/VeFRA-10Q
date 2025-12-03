@@ -5,6 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "VeFRA"
 version = "0.1" 
+description = "VeFRA - Vention Financial Analyzer, a Q&A system working with 10-Q financial reports."
+readme = "README.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
