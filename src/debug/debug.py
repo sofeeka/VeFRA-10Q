@@ -30,6 +30,12 @@ class DebugData:
         self.system_prompt: str = ""
         self.use_prompt: str = ""
         self.duration: float = 0.0
+        self.input_price: float = 0.0
+        self.output_price: float = 0.0
+
+    @property
+    def price_per_1000_requests(self) -> float:
+        return round((self.input_price + self.output_price) * 1000, 2)
 
     def add_document(self, quarter: str, year: str):
         document = DebugData_Document(

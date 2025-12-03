@@ -197,13 +197,18 @@
 
             <div class="meta-stats">
                 <div class="mini-card">
-                    <div class="info-label">User ID</div>
-                    <div class="info-value">{{ debug_data.user }}</div>
+                    <div class="info-label">Price per 1000 requests</div>
+                    <div class="info-value">~${{ debug_data.price_per_1000_requests }}</div>
                 </div>
 
                 <div class="mini-card">
                     <div class="info-label">Duration</div>
                     <div class="info-value">{{ debug_data.duration }}s</div>
+                </div>
+
+                <div class="mini-card">
+                    <div class="info-label">User ID</div>
+                    <div class="info-value">{{ debug_data.user }}</div>
                 </div>
             </div>
         </div>

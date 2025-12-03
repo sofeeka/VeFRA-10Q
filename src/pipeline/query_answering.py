@@ -11,6 +11,7 @@ from ..data_models.retrieval import (
 from ..debug.debug import DebugData_Chunk, DebugData_Document, debug_manager
 from ..generation.async_generator import AsyncGenerator
 from ..generation.prompts import QUESTION_VALIDITY_PROMPT
+from ..generation.token_counter import TokenCounter
 from ..processing.document_processor import process_chunk_after_retrieval
 from ..retrieval.database import UserKnowledgeBase
 from ..utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL
@@ -38,10 +39,12 @@ class QueryAnsweringPipeline:
         db: UserKnowledgeBase,
         generator: AsyncGenerator,
         config: QueryAnsweringConfig = QueryAnsweringConfig(),
+        token_counter: TokenCounter | None = None,
     ):
         self.db = db
         self.generator = generator
         self.config = config
+        self.token_counter = token_counter if token_counter else TokenCounter()
 
     async def _check_question_validity(self, query: str) -> QuestionValidityModel:
         """Check if the question is relevant to 10-Q documents."""
@@ -49,6 +52,7 @@ class QueryAnsweringPipeline:
             generator = get_async_generator(
                 model=CHOOSING_RELEVANT_DOCUMENTS_MODEL,
                 system_prompt="",
+                token_counter=self.token_counter,
             )
 
             response = await generator.generate_response(
@@ -73,7 +77,9 @@ class QueryAnsweringPipeline:
             logger.info("Extracting relevant document metadata...", query=query)
 
             relevant_docs_metadata: list[DocumentMetadata] = await get_relevant_docs(
-                question=query, user_id=self.db.user_id
+                question=query,
+                user_id=self.db.user_id,
+                token_counter=self.token_counter,
             )
 
             if debug_manager.is_enabled():
@@ -105,7 +111,9 @@ class QueryAnsweringPipeline:
 
     async def _expand_query(self, query: str) -> list[str]:
         result: tuple[str, list[str]] = await expand_query(
-            query=query, user_id=self.db.user_id
+            query=query,
+            user_id=self.db.user_id,
+            token_counter=self.token_counter,
         )
         reworded, expanded = result
         if debug_manager.is_enabled():
@@ -216,7 +224,7 @@ Question: {query}
         import time
 
         start_time = time.monotonic()
-
+        self.token_counter.reset()
         validity_task = self._check_question_validity(query=query)
 
         if self.config.document_extraction:
@@ -271,7 +279,20 @@ Question: {query}
 
         duration = time.monotonic() - start_time
         debug_manager.get_data().duration = f"{duration:.0f}"
-        logger.info(f"Pipeline completed in {duration:.2f} seconds.")
+
+        debug_manager.get_data().input_price = self.token_counter._input_price
+        debug_manager.get_data().output_price = self.token_counter._output_price
+
+        # Log token usage
+        token_counts = self.token_counter.get_counts()
+        logger.info(
+            f"Pipeline completed in {duration:.2f} seconds. "
+            f"Token usage: {token_counts['input_tokens']} input, "
+            f"{token_counts['output_tokens']} output, "
+            f"{token_counts['reasoning_tokens']} reasoning, "
+            f"{token_counts['total_tokens']} total"
+        )
+
         return response
 
 

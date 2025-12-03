@@ -7,6 +7,7 @@ from qdrant_client import AsyncQdrantClient
 from ..generation.async_generator import AsyncGenerator
 from ..generation.generator import Generator
 from ..generation.prompts import SYSTEM_PROMPT
+from ..generation.token_counter import TokenCounter
 from ..processing.chunking.docling_chunker import DoclingChunker
 from ..processing.document_parser import DocumentParser
 from ..retrieval.database import UserKnowledgeBase
@@ -87,15 +88,23 @@ def get_generator(
     )
 
 
-@lru_cache
 def get_async_generator(
     model: str,
     system_prompt: str = SYSTEM_PROMPT,
+    token_counter: TokenCounter | None = None,
 ) -> AsyncGenerator:
+    """
+    Create an AsyncGenerator instance.
+
+    Note: Not cached when token_counter is provided, as each request needs
+    its own stateful counter. For backward compatibility, still works without
+    token_counter for cases where token tracking isn't needed.
+    """
     return AsyncGenerator(
         model=model,
         system_prompt=system_prompt,
         client=get_async_openai_client(),
+        token_counter=token_counter,
     )
 
 

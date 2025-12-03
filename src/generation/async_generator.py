@@ -11,6 +11,7 @@ from tenacity import (
 
 from ..data_models.generation import ResponseModel
 from .base_generator import BaseGenerator
+from .token_counter import TokenCounter
 
 
 class AsyncGenerator(BaseGenerator):
@@ -19,11 +20,13 @@ class AsyncGenerator(BaseGenerator):
         model: str,
         system_prompt: str,
         client: AsyncOpenAI,
+        token_counter: TokenCounter | None = None,
     ):
         logger.info("Initializing Async Generator with AsyncOpenAI API.")
         self.model = model
         self.system_prompt = system_prompt
         self.client = client
+        self.token_counter = token_counter
 
     @retry(
         wait=wait_random_exponential(min=1, max=60),
@@ -55,6 +58,10 @@ class AsyncGenerator(BaseGenerator):
             # this adds ability to configure reasoning effort for gpt-5 models (gpt-4 and lower do not accept this parameter)
             reasoning={"effort": reasoning_effort} if "5" in self.model else {},
         )
+
+        if self.token_counter:
+            self.token_counter.add_from_response(response=response, model=self.model)
+
         return response
 
         # return f"""Response generation stub:
