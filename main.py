@@ -9,7 +9,9 @@ from src.utils.dependency import get_async_generator, get_user_knowledge_base
 
 
 async def main():
-    """Asynchronous main function to run the application."""
+    """
+    A simple script to demonstrate and test the core QueryAnsweringPipeline.
+    """
     await setup_database()
 
     user_id = "msft"
