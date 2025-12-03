@@ -66,16 +66,16 @@ RERANKING_MODEL = "jinaai/jina-reranker-v2-base-multilingual"
 # evaluation
 EVALUATION_CONCURRENCY_LIMIT = 10
 MSFT_FISCAL_MAP = {
-    "Q3 2022": "Three months ended September 30, 2022",
-    "Q1 2023": "Three months ended December 31, 2022",
-    "Q2 2023": "Three months ended March 31, 2023",
-    "Q3 2023": "Three months ended September 30, 2023",
+    "Q3 2022": "three months ended September 30, 2022",
+    "Q1 2023": "three months ended December 31, 2022",
+    "Q2 2023": "three months ended March 31, 2023",
+    "Q3 2023": "three months ended September 30, 2023",
 }
 NVDA_FISCAL_MAP = {
-    "Q3 2022": "Three months ended October 30, 2022",
-    "Q1 2023": "Three months ended April 30, 2023",
-    "Q2 2023": "Three months ended July 30, 2023",
-    "Q3 2023": "Three months ended October 29, 2023",
+    "Q3 2022": "three months ended October 30, 2022",
+    "Q1 2023": "three months ended April 30, 2023",
+    "Q2 2023": "three months ended July 30, 2023",
+    "Q3 2023": "three months ended October 29, 2023",
 }
 
 # full
