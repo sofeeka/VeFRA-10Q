@@ -8,7 +8,6 @@ from ..generation.async_generator import AsyncGenerator
 from ..generation.generator import Generator
 from ..generation.prompts import SYSTEM_PROMPT
 from ..processing.chunking.docling_chunker import DoclingChunker
-from ..processing.chunking.recursive_chunker import RecursiveChunker
 from ..processing.document_parser import DocumentParser
 from ..retrieval.database import UserKnowledgeBase
 from ..retrieval.database_manager import QdrantCollectionManager
@@ -88,6 +87,7 @@ def get_generator(
     )
 
 
+@lru_cache
 def get_async_generator(
     model: str,
     system_prompt: str = SYSTEM_PROMPT,
@@ -105,10 +105,6 @@ def get_openai_client() -> OpenAI:
 
 def get_async_openai_client() -> AsyncOpenAI:
     return AsyncOpenAI(api_key=get_openai_api_key())
-
-
-def get_recursive_chunker() -> RecursiveChunker:
-    return RecursiveChunker()
 
 
 def get_docling_chunker() -> DoclingChunker:

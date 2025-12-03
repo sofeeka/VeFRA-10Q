@@ -34,9 +34,6 @@ def get_user_evaluations_folder(user_id: str) -> Path:
 
 
 # chunking
-DEFAULT_CHUNK_SIZE = 500
-DEFAULT_CHUNK_OVERLAP = 100
-DEFAULT_CHUNKING_STRATEGY = "recursive"
 CHUNKING_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # embedding
