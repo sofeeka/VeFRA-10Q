@@ -106,6 +106,8 @@ class QueryAnsweringPipeline:
             query=query, user_id=self.db.user_id
         )
         reworded, expanded = result
+        if debug_manager.is_enabled():
+            debug_manager.get_data().reworded_question = reworded
         return reworded, expanded
 
     async def _retrieve(
@@ -249,7 +251,7 @@ Question: {query}
         response = await self._generate(chunks=reranked_chunks, query=query)
 
         duration = time.monotonic() - start_time
-        debug_manager.get_data().duration = f"{duration:.2f}"
+        debug_manager.get_data().duration = f"{duration:.0f}"
         logger.info(f"Pipeline completed in {duration:.2f} seconds.")
         return response
 

@@ -20,6 +20,7 @@ class DebugData:
     def __init__(self):
         self.user: str = ""
         self.question: str = ""
+        self.reworded_question: str = ""
         self.answer: str = ""
         self.documents: list[DebugData_Document] = []
         self.unique_retrieved_chunks: list[DebugData_Chunk] = []
