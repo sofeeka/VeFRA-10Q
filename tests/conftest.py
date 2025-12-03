@@ -6,7 +6,7 @@ from docling_core.types.doc import DoclingDocument
 from docling_core.types.doc.document import TableItem, TextItem
 from fastapi.testclient import TestClient
 from openai.types.responses.parsed_response import ParsedResponse
-from qdrant_client import QdrantClient  # TODO maybe change to AsyncQdrantClient
+from qdrant_client import QdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http import models as rest
 

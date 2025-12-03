@@ -1,13 +1,14 @@
 import re
 
-from src.data_models.retrieval import DocumentMetadata, Intent, RelevantDocumentsModel
-from src.generation.prompts import (
+from ..data_models.retrieval import DocumentMetadata, Intent, RelevantDocumentsModel
+from ..generation.prompts import (
     CHOOSING_RELEVANT_DOCUMENTS_PROMPT,
     CHOOSING_RELEVANT_DOCUMENTS_SYSTEM_PROMPT,
 )
-from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
-from src.utils.dependency import get_async_generator
-from src.utils.exceptions import VeFRA_GenerationError, VeFRA_MetadataExtractionError
+from ..generation.token_counter import TokenCounter
+from ..utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
+from ..utils.dependency import get_async_generator
+from ..utils.exceptions import VeFRA_MetadataExtractionError
 
 FILENAME_PATTERN = re.compile(r"(\d{4})[\s_-]+(Q[1-3])", re.IGNORECASE)
 
@@ -15,6 +16,7 @@ FILENAME_PATTERN = re.compile(r"(\d{4})[\s_-]+(Q[1-3])", re.IGNORECASE)
 async def get_output_parsed_for_relevant_document_extraction(
     question: str,
     user_id: str,
+    token_counter: TokenCounter | None = None,
 ) -> RelevantDocumentsModel:
     """ """
 
@@ -33,6 +35,7 @@ async def get_output_parsed_for_relevant_document_extraction(
     generator = get_async_generator(
         model=CHOOSING_RELEVANT_DOCUMENTS_MODEL,
         system_prompt=CHOOSING_RELEVANT_DOCUMENTS_SYSTEM_PROMPT,
+        token_counter=token_counter,
     )
 
     response = await generator.generate_response(
@@ -45,6 +48,7 @@ async def get_output_parsed_for_relevant_document_extraction(
 async def get_relevant_docs(
     question: str,
     user_id: str,
+    token_counter: TokenCounter | None = None,
 ) -> list[DocumentMetadata] | None:
     """
     Vaildates the user query to catch fallbacks like irrelevant question.
@@ -53,22 +57,11 @@ async def get_relevant_docs(
     """
 
     output = await get_output_parsed_for_relevant_document_extraction(
-        question=question, user_id=user_id
+        question=question,
+        user_id=user_id,
+        token_counter=token_counter,
     )
 
-    if output.status != "success":  # == "failure"
-        if output.intent == Intent.IRRELEVANT_QUESTION:
-            raise VeFRA_GenerationError(
-                f"This system is designed to assist people with financial analysis. Question {question} is irrelevant."
-            )
-        elif output.intent == Intent.WRONG_Q_FALLBACK:
-            raise VeFRA_GenerationError(
-                f"WRONG Q FALLBACK triggered for question {question}"
-            )
-        else:
-            raise
-
-    # at this point status == "success"
     match output.intent:
         case Intent.SPECIFIC_TIME:
             # all documents should already be available

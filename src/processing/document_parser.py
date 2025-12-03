@@ -12,7 +12,7 @@ from docling.exceptions import ConversionError
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.utils.exceptions import VeFRA_DocumentParsingError
+from ..utils.exceptions import VeFRA_DocumentParsingError
 
 
 class DocumentParser:

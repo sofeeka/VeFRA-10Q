@@ -7,16 +7,14 @@ import pandas as pd
 from loguru import logger
 from tqdm.asyncio import tqdm
 
-from evaluation.evaluation_service import MetricsEvaluator
-from src.data_models.evaluation import (
+from ..data_models.evaluation import (
     EvaluationQuestion,
     EvaluationResult,
 )
-from src.generation.async_generator import AsyncGenerator
-from src.generation.prompts import EVALUATION_SYSTEM_PROMPT
-from src.pipeline.query_answering import answer_query
-from src.retrieval.database import UserKnowledgeBase
-from src.utils.config import (
+from ..debug.debug import debug_manager
+from ..generation.prompts import EVALUATION_SYSTEM_PROMPT
+from ..pipeline.query_answering import QueryAnsweringPipeline
+from ..utils.config import (
     EVALUATION_CONCURRENCY_LIMIT,
     EVALUATION_MODEL,
     MAIN_RESPONSE_GENERATION_MODEL,
@@ -24,15 +22,17 @@ from src.utils.config import (
     NVDA_BENCHMARK,
     get_user_evaluations_folder,
 )
-from src.utils.dependency import (
+from ..utils.dependency import (
     get_async_generator,
     get_user_knowledge_base,
 )
-from src.utils.exceptions import VeFRA_EvaluationError, VeFRAException
+from ..utils.exceptions import VeFRA_EvaluationError, VeFRAException
+from .evaluation_service import MetricsEvaluator
 
 question_id = "Question Id"
-ground_truth_answer = "Ground Truth Answer"
-query = "Question"
+ground_truth_answer = "Answer"
+question = "Question"
+ground_truth_context = "Context"
 
 
 def _get_evaluation_session_filepath(user_id: str, timestamp_str: str) -> Path:
@@ -85,16 +85,15 @@ def _save_single_result(session_filepath: Path, result: EvaluationResult):
 
 async def _evaluate_single_question(
     question_data: EvaluationQuestion,
-    db: UserKnowledgeBase,
-    rag_generator: AsyncGenerator,
     metrics_evaluator: MetricsEvaluator,
+    pipeline: QueryAnsweringPipeline,
 ) -> EvaluationResult:
     logger.info(f"Starting evaluation for question_id: {question_data.question_id}")
 
     # Initial default result with question data
     current_result = EvaluationResult(
         question_id=question_data.question_id,
-        query=question_data.query,
+        query=question_data.question,
         ground_truth_answer=question_data.ground_truth_answer,
         rag_response="",
         retrieved_chunks=[],
@@ -104,11 +103,15 @@ async def _evaluate_single_question(
     )
 
     try:
-        rag_response, retrieved_chunks_list = await answer_query(
-            query=question_data.query,
-            db=db,
-            generator=rag_generator,
-        )
+        debug_manager.enable()
+        debug_manager.clear_data()
+
+        debug_data = debug_manager.get_data()
+        debug_data.user = pipeline.db.user_id
+        debug_data.question = question_data.question
+
+        rag_response = await pipeline.run(question_data.question)
+        retrieved_chunks_list = debug_data.final_retrieved_chunks
         full_context = "\n---\n".join(retrieved_chunks_list)
 
         current_result.rag_response = rag_response
@@ -118,7 +121,7 @@ async def _evaluate_single_question(
 
         metric_tasks = {
             "answer_correctness": metrics_evaluator.evaluate_answer_correctness(
-                query=question_data.query,
+                query=question_data.question,
                 ground_truth_answer=question_data.ground_truth_answer,
                 rag_response=rag_response,
             ),
@@ -126,18 +129,23 @@ async def _evaluate_single_question(
                 rag_response=rag_response, full_context=full_context
             ),
             "context_coverage": metrics_evaluator.evaluate_context_coverage(
-                query=question_data.query,
+                query=question_data.question,
                 ground_truth_answer=question_data.ground_truth_answer,
                 full_context=full_context,
             ),
-            # "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
-            #     question_data.query, retrieved_chunks_list
-            # ),
-            # "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
-            #     query=question_data.query,
-            #     ground_truth_answer=question_data.ground_truth_answer,
-            #     rag_response=rag_response,
-            # ),
+            "context_recall_hit": metrics_evaluator.evaluate_context_recall_hit_rate(
+                query=question_data.question,
+                ground_truth_context=question_data.ground_truth_context,
+                full_context=full_context,
+            ),
+            "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
+                question_data.question, retrieved_chunks_list
+            ),
+            "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
+                query=question_data.question,
+                ground_truth_answer=question_data.ground_truth_answer,
+                rag_response=rag_response,
+            ),
         }
 
         results = await asyncio.gather(*metric_tasks.values(), return_exceptions=True)
@@ -179,13 +187,21 @@ async def _evaluate_single_question(
             f"Unhandled exception for question {question_data.question_id}: {e}",
             exc_info=True,
         )
+    finally:
+        debug_manager.disable()
 
     return current_result
 
 
-async def run_evaluation(user_id: str) -> pd.DataFrame:
+async def run_evaluation(
+    user_id: str, csv_filepath: str | Path | None = None
+) -> pd.DataFrame:
     """
     Runs the full evaluation pipeline concurrently.
+
+    Args:
+        user_id: The user ID to run evaluation for
+        csv_filepath: Optional path to uploaded CSV file. If not provided, uses default benchmarks.
     """
     logger.info(f"Starting evaluation run for user '{user_id}'.")
     start_time = datetime.datetime.now()
@@ -199,14 +215,21 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
 
     metrics_evaluator = MetricsEvaluator(generator=eval_async_generator)
 
-    if db.user_id == "msft":
-        benchmark = MSFT_BENCHMARK
+    # Determine which CSV file to use
+    if csv_filepath:
+        benchmark = Path(csv_filepath)
+        logger.info(f"Using uploaded CSV file: {benchmark}")
     else:
-        benchmark = NVDA_BENCHMARK
+        # Use default benchmarks based on user_id
+        if db.user_id == "msft":
+            benchmark = MSFT_BENCHMARK
+        else:
+            benchmark = NVDA_BENCHMARK
+        logger.info(f"Using default benchmark: {benchmark}")
 
     full_df = pd.read_csv(benchmark)
 
-    required_cols = [question_id, query, ground_truth_answer]
+    required_cols = [question_id, question, ground_truth_answer, ground_truth_context]
     if not all(col in full_df.columns for col in required_cols):
         raise VeFRA_EvaluationError(
             f"Evaluation dataset must contain columns: {required_cols}. Found: {full_df.columns.tolist()}"
@@ -217,8 +240,9 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
     questions: list[EvaluationQuestion] = [
         EvaluationQuestion(
             question_id=str(row[question_id]),
-            query=row[query],
+            question=row[question],
             ground_truth_answer=row[ground_truth_answer],
+            ground_truth_context=row.get(ground_truth_context, None),
         )
         for _, row in full_df.iterrows()
     ]
@@ -235,14 +259,14 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
         logger.info("No remaining questions to evaluate. Session is already complete.")
     else:
         semaphore = asyncio.Semaphore(EVALUATION_CONCURRENCY_LIMIT)
+        pipeline = QueryAnsweringPipeline(db=db, generator=rag_async_generator)
 
         async def evaluate_and_save(q_data: EvaluationQuestion) -> EvaluationResult:
             async with semaphore:
                 result = await _evaluate_single_question(
                     question_data=q_data,
-                    db=db,
-                    rag_generator=rag_async_generator,
                     metrics_evaluator=metrics_evaluator,
+                    pipeline=pipeline,
                 )
                 _save_single_result(session_filepath, result)
                 return result
@@ -272,6 +296,7 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
     mean_correctness = results_df["answer_correctness_score"].dropna().mean()
     mean_groundedness = results_df["groundedness_score"].dropna().mean()
     mean_context_coverage = results_df["context_coverage_score"].dropna().mean()
+    mean_context_recall_hit = results_df["context_recall_hit_score"].dropna().mean()
 
     logger.info(
         f"Evaluation completed. {n_success}/{n_total} questions processed successfully."
@@ -283,6 +308,8 @@ async def run_evaluation(user_id: str) -> pd.DataFrame:
         logger.info(f"Mean Groundedness: {mean_groundedness:.2f}")
     if pd.notna(mean_context_coverage):
         logger.info(f"Mean Context Coverage: {mean_context_coverage:.2f}")
+    if pd.notna(mean_context_recall_hit):
+        logger.info(f"Mean Context Recall Hit: {mean_context_recall_hit:.2f}")
 
     final_results_csv_path = (
         get_user_evaluations_folder(user_id=user_id)

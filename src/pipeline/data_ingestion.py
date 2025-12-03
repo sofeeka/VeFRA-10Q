@@ -1,8 +1,8 @@
 from loguru import logger
 
-from src.data_models.api import FileUploadModel
-from src.retrieval.database import ChunkPayload, UserKnowledgeBase
-from src.utils.dependency import get_docling_chunker, get_document_parser
+from ..data_models.api import FileUploadModel
+from ..retrieval.database import ChunkPayload, UserKnowledgeBase
+from ..utils.dependency import get_docling_chunker, get_document_parser
 
 
 async def ingest_single_document(model: FileUploadModel, db: UserKnowledgeBase):

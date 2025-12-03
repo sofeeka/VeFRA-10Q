@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from loguru import logger
+
 PROJECT_ROOT_PATH = Path(__file__).resolve().parent.parent.parent
 
 # data
@@ -34,10 +36,8 @@ def get_user_evaluations_folder(user_id: str) -> Path:
 
 
 # chunking
-DEFAULT_CHUNK_SIZE = 500
-DEFAULT_CHUNK_OVERLAP = 100
-DEFAULT_CHUNKING_STRATEGY = "recursive"
 CHUNKING_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+MAX_SEQUENCE_LENGTH = 1024
 
 # embedding
 # DEFAULT_EMBEDDING_MODEL = "models/text-embedding-004" # google embedding
@@ -52,14 +52,45 @@ DEFAULT_QDRANT_COLLECTION_NAME = "VeFRA-10Q-Collection"
 DEFAULT_QDRANT_STORAGE_PATH = Path(DATA_DIR_PATH, "./qdrant_storage")
 DEFAULT_QDRANT_DISTANCE_METRIC = "Cosine"
 DEFAULT_SEARCH_K = 10
+CHUNKS_PER_DOC = 5
 
 # generation
 MAIN_RESPONSE_GENERATION_MODEL = "gpt-5-nano"
 CHOOSING_RELEVANT_DOCUMENTS_MODEL = "gpt-4.1-nano"
 EVALUATION_MODEL = "gpt-5-nano"
+QUERY_EXPANSION_MODEL = "gpt-5-nano"
+
+# reranking
+RERANKING_MODEL = "jinaai/jina-reranker-v2-base-multilingual"
 
 # evaluation
 EVALUATION_CONCURRENCY_LIMIT = 10
+MSFT_FISCAL_MAP = {
+    "Q3 2022": "three months ended September 30, 2022",
+    "Q1 2023": "three months ended December 31, 2022",
+    "Q2 2023": "three months ended March 31, 2023",
+    "Q3 2023": "three months ended September 30, 2023",
+}
+NVDA_FISCAL_MAP = {
+    "Q3 2022": "three months ended October 30, 2022",
+    "Q1 2023": "three months ended April 30, 2023",
+    "Q2 2023": "three months ended July 30, 2023",
+    "Q3 2023": "three months ended October 29, 2023",
+}
+
+
+def get_fiscal_map_for_user_id(user_id: str):
+    match user_id:
+        case "msft":
+            return MSFT_FISCAL_MAP
+        case "nvda":
+            return NVDA_FISCAL_MAP
+        case _:
+            logger.warning(
+                f"User ID {user_id} is not supported, there is no known fiscal calendar mapping for this user. Proceeding without a mapping, the LLM may get confuded."
+            )
+            return {}
+
 
 # full
 MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark.csv"

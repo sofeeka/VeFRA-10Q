@@ -1,12 +1,12 @@
 from loguru import logger
 from qdrant_client import models
 
-from src.utils.config import DENSE_DEFAULT, SPARSE_DEFAULT
-from src.utils.dependency import (
+from ..utils.config import DENSE_DEFAULT, SPARSE_DEFAULT
+from ..utils.dependency import (
     get_dense_embedding_model,
     get_qdrant_collection_manager,
 )
-from src.utils.exceptions import VeFRA_CollectionSetupError
+from ..utils.exceptions import VeFRA_CollectionSetupError
 
 
 async def setup_database() -> bool:

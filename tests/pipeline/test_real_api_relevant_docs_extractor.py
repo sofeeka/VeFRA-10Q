@@ -5,7 +5,6 @@ import pytest
 from src.data_models.retrieval import DocumentMetadata
 from src.pipeline.relevant_docs_extractor import get_relevant_docs
 from src.utils.api_key_manager import get_openai_api_key
-from src.utils.exceptions import VeFRA_GenerationError
 
 try:
     get_openai_api_key()
@@ -59,18 +58,6 @@ TEST_CASES = [
         query="Has the company ever mentioned 'AI research' in its reports?",
         # For a general question, the pipeline should return None to search all documents.
         expected_documents=None,
-    ),
-    DocumentExtractionTestCase(
-        id="irrelevant_question_fallback",
-        query="What is the CEO's favorite color?",
-        expected_documents=None,
-        expected_exception=VeFRA_GenerationError,
-    ),
-    DocumentExtractionTestCase(
-        id="wrong_q_fallback",
-        query="What were the sales for Q4 2023?",
-        expected_documents=None,
-        expected_exception=VeFRA_GenerationError,
     ),
 ]
 

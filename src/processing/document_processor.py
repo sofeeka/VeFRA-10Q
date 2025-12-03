@@ -7,8 +7,8 @@ from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.utils.config import get_user_tables_folder
-from src.utils.exceptions import (
+from ..utils.config import get_user_tables_folder
+from ..utils.exceptions import (
     VeFRA_FileIOError,
     VeFRA_ProcessingError,
     VeFRA_TableExtractionError,
@@ -51,6 +51,9 @@ def process_chunk_after_retrieval(chunk: str, user_id: str) -> str:
     logger.trace(f"Chunk content before table insertion:\n---\n{chunk}\n---")
 
     processed_chunk = _insert_tables_into_chunk(chunk_text=chunk, user_id=user_id)
+    processed_chunk = _remove_table_summary_from_chunk(chunk_text=processed_chunk)
+    processed_chunk = _remove_duplicate_new_lines(text=processed_chunk)
+    processed_chunk = processed_chunk.strip()
 
     if not processed_chunk:
         logger.warning(
@@ -196,3 +199,20 @@ def _insert_tables_into_chunk(chunk_text: str, user_id) -> str:
     reconstructed_text = TABLE_REFERENCE_PATTERN.sub(_load_table_content, chunk_text)
 
     return reconstructed_text
+
+
+def _remove_table_summary_from_chunk(chunk_text: str) -> str:
+    """
+    Removes the table summary sections from the chunk text
+    """
+    pattern = r"--- TABLE SUMMARY START ---.*?--- TABLE SUMMARY END ---"
+    cleaned_text = re.sub(pattern, "\n\n", chunk_text, flags=re.DOTALL)
+    return cleaned_text
+
+
+def _remove_duplicate_new_lines(text: str) -> str:
+    """
+    Removes dupllicate new lines from the text
+    """
+    pattern = r"\n(?:[ \t]*\n){2,}"
+    return re.sub(pattern, "\n\n", text)

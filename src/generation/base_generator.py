@@ -4,7 +4,7 @@ from loguru import logger
 from openai.types.responses.parsed_response import ParsedResponse
 from pydantic import BaseModel
 
-from src.data_models.generation import ResponseModel
+from ..data_models.generation import ResponseModel
 
 
 class BaseGenerator(ABC):

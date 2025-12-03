@@ -4,21 +4,23 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 from qdrant_client import AsyncQdrantClient
 
-from processing.chunking.docling_chunker import DoclingChunker
-from processing.chunking.recursive_chunker import RecursiveChunker
-from src.generation.async_generator import AsyncGenerator
-from src.generation.generator import Generator
-from src.generation.prompts import SYSTEM_PROMPT
-from src.processing.document_parser import DocumentParser
-from src.retrieval.database import UserKnowledgeBase
-from src.retrieval.database_manager import QdrantCollectionManager
-from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
-from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
-from src.utils.api_key_manager import get_openai_api_key
-from src.utils.config import (
+from ..generation.async_generator import AsyncGenerator
+from ..generation.generator import Generator
+from ..generation.prompts import SYSTEM_PROMPT
+from ..generation.token_counter import TokenCounter
+from ..processing.chunking.docling_chunker import DoclingChunker
+from ..processing.document_parser import DocumentParser
+from ..retrieval.database import UserKnowledgeBase
+from ..retrieval.database_manager import QdrantCollectionManager
+from ..retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
+from ..retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
+from ..retrieval.reranker import FinancialReranker
+from .api_key_manager import get_openai_api_key
+from .config import (
     DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_STORAGE_PATH,
     DENSE_EMBEDDING_MODEL_NAME,
+    RERANKING_MODEL,
     SPARSE_EMBEDDING_MODEL_NAME,
 )
 
@@ -49,6 +51,13 @@ def get_async_qdrant_client() -> AsyncQdrantClient:
 def get_document_parser() -> DocumentParser:
     logger.info("Initializing document parser (cached)...")
     return DocumentParser()
+
+
+# EXPENSIVE: model loading
+@lru_cache
+def get_reranking_model() -> FinancialReranker:
+    logger.info("Initializing reranking model (cached)...")
+    return FinancialReranker(model_name=RERANKING_MODEL)
 
 
 def get_user_knowledge_base(user_id: str) -> UserKnowledgeBase:
@@ -82,11 +91,20 @@ def get_generator(
 def get_async_generator(
     model: str,
     system_prompt: str = SYSTEM_PROMPT,
+    token_counter: TokenCounter | None = None,
 ) -> AsyncGenerator:
+    """
+    Create an AsyncGenerator instance.
+
+    Note: Not cached when token_counter is provided, as each request needs
+    its own stateful counter. For backward compatibility, still works without
+    token_counter for cases where token tracking isn't needed.
+    """
     return AsyncGenerator(
         model=model,
         system_prompt=system_prompt,
         client=get_async_openai_client(),
+        token_counter=token_counter,
     )
 
 
@@ -96,10 +114,6 @@ def get_openai_client() -> OpenAI:
 
 def get_async_openai_client() -> AsyncOpenAI:
     return AsyncOpenAI(api_key=get_openai_api_key())
-
-
-def get_recursive_chunker() -> RecursiveChunker:
-    return RecursiveChunker()
 
 
 def get_docling_chunker() -> DoclingChunker:

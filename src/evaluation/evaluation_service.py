@@ -2,9 +2,9 @@ import asyncio
 
 from loguru import logger
 
-from src.data_models.evaluation import LLMJudgeScore
-from src.generation.async_generator import AsyncGenerator
-from src.generation.prompts import (
+from ..data_models.evaluation import LLMJudgeScore
+from ..generation.async_generator import AsyncGenerator
+from ..generation.prompts import (
     ANSWER_CORRECTNESS_JUDGE_PROMPT,
     CHUNK_RELEVANCE_JUDGE_PROMPT,
     CONTEXT_COVERAGE_JUDGE_PROMPT,
@@ -53,6 +53,12 @@ class MetricsEvaluator:
             GROUNDEDNESS_JUDGE_PROMPT,
             {"rag_response": rag_response, "full_context": full_context},
         )
+
+    async def evaluate_context_recall_hit_rate(
+        self, query: str, ground_truth_context: str, full_context: str
+    ) -> LLMJudgeScore:
+        hit = ground_truth_context in full_context
+        return LLMJudgeScore(score=int(hit), reasoning=f"Hit: {hit}")
 
     async def evaluate_context_coverage(
         self, query: str, ground_truth_answer: str, full_context: str

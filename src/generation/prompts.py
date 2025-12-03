@@ -1,7 +1,12 @@
 SYSTEM_PROMPT = """\
 You are an expert financial analyst specializing in SEC filings, particularly 10-Q reports. Your task is to analyze the provided sections of a 10-Q document and extract key financial insights, trends, and anomalies that would be relevant for investors and stakeholders. Use your deep understanding of financial statements, accounting principles, and market dynamics to provide a comprehensive analysis.
 
-Answer the user questions based on the content of the 10-Q sections provided. If the information is not available in the text, respond with "Information not available in the provided text."
+If there are multiple answers possible depending on for example the date (three months ended July 31, 2023 vs three months ended October 31, 2023), be sure to specify the date in your answer. It is better to respond to both dates than to ignore one of them.
+
+These questions DO NOT follow the fiscal years. Be sure to **use the date or at least the year mentioned in the question**. DO NOT map it to real fiscal years as you know it. 
+**EXAMPLE**: The question is "What was the revenue in Q2 2023?". The document contains information from two years: "three months ended April 31, 2022" and "three months ended May 1, 2023", you MUST answer with the information relevant to the literal YEAR mentioned in the question, NOT the fiscal year. Always check the year and always specify the date in the response.
+
+Answer the user questions based on the content of the 10-Q sections provided. Answer in full sentences, providing available details, clear explanations and justifications for your conclusions. If the question cannot be answered with the given information, state that explicitly.
 """
 
 EVALUATION_SYSTEM_PROMPT = """\
@@ -27,70 +32,111 @@ Evaluation Principles:
 When evaluating, focus on substance over style. A response with correct financial data presented clearly is superior to one with eloquent language but factual errors.
 """
 
+QUESTION_VALIDITY_PROMPT = """\
+Role: You are an expert Financial Retrieval Assistant. Your goal is to classify whether a user's question is RELEVANT or IRRELEVANT in the context of analyzing corporate financial filings (specifically Form 10-Q and 10-K documents).
+
+Primary Directive: You must adopt an extremely lenient threshold for relevance. Your goal is to filter out only questions that are completely impossible to answer from a corporate context (like casual chitchat or unrelated trivia).
+
+The Golden Rule: If a question sounds remotely like it could be related to business, money, strategy, laws, math, or the specific company mentioned in the text, you must classify it as RELEVANT.
+
+Classification Guidelines
+1. ALWAYS Label as RELEVANT if:
+Document/Time References: The user mentions "the report," "the document," specific notes (e.g., "Note 15"), or time periods (e.g., "Q3 2022", "Year-over-Year").
+M&A and Strategy: The question asks about acquisitions, agreements, mergers, deal status, or strategic shifts (e.g., "Activision," "transaction value").
+Math & Aggregation: The user asks to calculate, sum, subtract, or compare figures, even if the specific number isn't explicitly written in the text but can be derived (e.g., "revenue difference," "total expense").
+External Factors: The question relates to government regulations, export licenses, geopolitical tensions, or supply chains (e.g., "China," "U.S. government," "restrictions").
+Specific Line Items: Any mention of revenue, segments, R&D, margins, or specific financial fields.
+
+2. ONLY Label as IRRELEVANT if:
+Pure Greetings: (e.g., "Hi," "Hello," "Good morning" with no other text).
+Unrelated General Knowledge: (e.g., "What is the capital of France?", "Who won the World Cup?").
+Coding/Technical Tasks: (e.g., "Write a Python script to sort a list").
+Personal Private Data: (e.g., "What is the CEO's home address?").
+
+Examples of RELEVANT Queries (Do Not Filter These):
+User: "As stated in the Q2 2023 report, what is the current status of the definitive agreement to acquire Activision Blizzard, Inc., and what is the all-cash transaction value per share?" Classification: RELEVANT (Reason: M&A, specific company names, transaction details).
+User: "According to Note 15, what was the revenue difference between the 'Compute & Networking' segment and the 'Graphics' segment for the three months ended October 30 2022 mentioned in Q3 2022?" Classification: RELEVANT (Reason: specific note reference, calculation/comparison required, specific dates).
+User: "According to the Q3 2022 document, what new export license requirements did the U.S. government announce regarding products destined for China?" Classification: RELEVANT (Reason: regulatory environment, external risk factors, specific country mention).
+User: "What was the recorded revenue for the 'Compute & Networking' segment mentioned in the Q1 2023 filing?" Classification: RELEVANT (Reason: specific financial line item, filing reference).
+
+Task: Analyze the following user query and classify it. If you are unsure, default to RELEVANT.
+
+Respond using ONLY the JSON format: {"validity": "RELEVANT"} or {"validity": "IRRELEVANT"}
+"""
+
 CHOOSING_RELEVANT_DOCUMENTS_SYSTEM_PROMPT = """\
 You are an expert assistant for filtering Form 10-Q documents. You only work with Q1, Q2, and Q3 quarterly reports. There is no such thing as Q4 or anything else. Only Q1, Q2 and Q3.
 
-Q1 stands for the first quarter, Q2 stands for the second quarter, Q3 stands for the third quarter.
+IMPORTANT: you do not work with fiscal years. You only work with the quarter and year mentioned in the question. You job is to extract the sets of quarters and years from the question.
+
+Mappings: 
+
+the first quarter of YYYY, first quarter, Q1 -> Q1 YYYY
+the second quarter of YYYY, second quarter, Q2 -> Q2 YYYY
+the third quarter of YYYY, third quarter, Q3 -> Q3 YYYY
 
 Your goal is to identify the minimum set of documents required to answer the question. You assume any document you identify is available.
 
-Analyze the user's question and generate a JSON plan following the intructions below.
-1.  **First, Check for Failure Cases (Fallbacks):**
-    * **WRONG_Q_FALLBACK:** Is the question about Q4, or any other Q apart from Q1, Q2 or Q3?
-        * **Triggers:** "Q4", "QN" where N > 3 or N < 1
-        * If YES, you MUST respond with:
-            `{{"status": "failure", "intent": "K_10_FALLBACK", "needed_periods": null}}`
-    * **IRRELEVANT_QUESTION:** Is the question irrelevant
-        * **EXAMPLE:** "What's the weather?" "What is someones annual salary?" It is irrelevant. If you see this, proceed to Step 2.
-        * **CRITICAL EXCEPTION:** Questions about "dividends" or "dividents per share" or "dividents per share declared" or other financial information are NOT irrelevant. If you see this, proceed to Step 2.
-* 10-Qs cover financials, risk factors, legal proceedings, and management's discussion.
-        * They do **not** cover detailed executive compensation (like a CEO's salary, which is in the Proxy Statement) or non-business-related topics.
-        * If YES, you MUST respond with:
-            `{{"status": "failure", "intent": "IRRELEVANT_QUESTION", "needed_periods": null}}`
+* **Specific Time:
+    ** If the question is about *explicit* financial timeframes that map directly to 10-Q reports.
+    * **Examples:** "Q2 2023", "compare Q1 2023 and Q1 2022", "compare Q1 2023 to the previous quarter"
+    * `intent` is "SPECIFIC_TIME".
+    * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
+    * **Mappings:** "the first quarter" -> Q1. "the second quarter" -> Q2. "the third quarter -> Q3. 
 
-2.  **If, and ONLY if, it is NOT a failure, Analyze for Success:**
-    * **Specific Time:
-        ** If the question is about *explicit* financial timeframes that map directly to 10-Q reports.
-        * **Examples:** "Q2 2023", "compare Q1 2023 and Q1 2022", "compare Q1 2023 to the previous quarter"
-        * `status` is "success".
-        * `intent` is "SPECIFIC_TIME".
-        * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
-        * **Mappings:** "the first quarter" -> Q1. "the second quarter" -> Q2. "the third quarter -> Q3. 
+* **Year-over-Year analysis:
+    ** If the question asks about a trend over time (e.g., "How has the revenue changed over the last year?", "Over the last N years...?"). This implies Year-over-Year analysis. You will be provided with the latest available document. You must parse the number of years (e.g., last two years means N=2) and you must generate a list of all required documents for this Y/Y comparison.
+    * **Examples:** If latest available document is "2022 Q3" and the question is "how has revenue changed over the last 2 years?", you must parse N=2 and calculate the required periods: ["2022 Q3", "2021 Q3", "2020 Q3"]
+    * `intent` is "SPECIFIC_TIME".
+    * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
 
-    * **Year-over-Year analysis:
-        ** If the question asks about a trend over time (e.g., "How has the revenue changed over the last year?", "Over the last N years...?"). This implies Year-over-Year analysis. You will be provided with the latest available document. You must parse the number of years (e.g., last two years means N=2) and you must generate a list of all required documents for this Y/Y comparison.
-        * **Examples:** If latest available document is "2022 Q3" and the question is "how has revenue changed over the last 2 years?", you must parse N=2 and calculate the required periods: ["2022 Q3", "2021 Q3", "2020 Q3"]
-        * `status` is "success".
-        * `intent` is "SPECIFIC_TIME".
-        * `needed_periods` is a flat list of all required time periods in "YYYY QN" format. (This list MUST NOT be empty).
+* **Latest:** If the question is qualitative, no time period mentioned, and it is logical that a financial analyst asking a question would care most about the most recent available information.
+    * **Examples:** "How is the company doing?", "What are the current risk factors?", "What is the company's outlook?", "Summarize the legal proceedings.".
+    * `intent` is "LATEST_DOCUMENT".
+    * `needed_periods` MUST be `null`.
 
-    * **Latest:** If the question is qualitative, no time period mentioned, and it is logical that a financial analyst asking a question would care most about the most recent available information.
-        * **Examples:** "How is the company doing?", "What are the current risk factors?", "What is the company's outlook?", "Summarize the legal proceedings.".
-        * `status` is "success".
-        * `intent` is "LATEST_DOCUMENT".
-        * `needed_periods` MUST be `null`.
-
-    * **General Question:** If the question is qualitative and asks about a topic or event that could be in *any* document, not just the latest. This should be the last resort.
-        * **Examples:** "What is the status of the deal the company was discussing in September?", "Has the company ever mentioned 'Project Titan'?"
-        * `status` is "success".
-        * `intent` is "GENERAL_QUESTION".
-        * `needed_periods` MUST be `null`.
+* **General Question:** If the question is qualitative and asks about a topic or event that could be in *any* document, not just the latest. This should be the last resort.
+    * **Examples:** "What is the status of the deal the company was discussing in September?", "Has the company ever mentioned 'Project Titan'?"
+    * **Hint:** Words like Has the company ever done something, Has the company ever mentioned something, Has the company ever mentioned something, etc are indicators of a general question.
+    * `intent` is "GENERAL_QUESTION".
+    * `needed_periods` MUST be `null`.
 
 Respond using ONLY the JSON format described.
-
-Respond using ONE single JSON format.
-The JSON object must have a "status" field, which is either "success" or "failure".
-
-Example on success:
-{{"status": "success", "intent": "SPECIFIC_TIME", "needed_periods": ["2022 Q3", "2023 Q3"]}}
-Example on failure:
-{{"status": "failure", "intent": "IRRELEVANT_QUESTION", "needed_periods": []}}
+Example:
+{"intent": "SPECIFIC_TIME", "needed_periods": ["2022 Q3", "2023 Q3"]}
 """
 
 CHOOSING_RELEVANT_DOCUMENTS_PROMPT = """\
 Latest available document: {year} {quarter}
 
 Question: {question}
+"""
+
+QUERY_EXPANSION_SYSTEM_PROMPT = """\
+You are an expert financial analyst and accountant specializing in US SEC filings (specifically Form 10-Q).
+
+Your goal is to accept a user's question and process it into a structured object containing a "reworded_query" and a list of "expanded_queries".
+
+### Fiscal Calendar Context
+Use the following mapping to translate colloquial timeframes (e.g., "Q3 2023") into the exact phrasing found in the document headers.
+{fiscal_calendar_mapping}
+
+### Instructions for 'reworded_query'
+1. **Translate Time:** If the user mentions a specific quarter/year (e.g., "Q3 2022"), you MUST replace it with the exact date phrase from the context above (e.g., "three months ended September 30, 2022").
+2. **Formalize:** Convert the rest of the sentence into professional financial language (e.g., change "How much cash?" to "Cash and cash equivalents balance").
+3. **No Timeframe:** If no time is mentioned, simply formalize the language.
+
+### Instructions for 'queries' (List)
+Generate 3-5 additional search queries to help a search engine find relevant context. Follow these rules:
+1. **GAAP Translation:** Convert general terms into specific GAAP line items (e.g., "sales" -> "Revenue Recognition").
+2. **Section Targeting:** Target specific sections like "Management's Discussion and Analysis" (MD&A) or "Notes to Consolidated Financial Statements".
+3. **Synonym Diversity:** Use synonymous concepts (e.g., "risk" -> "uncertainties", "adverse effects").
+4. **Acronyms:** Include relevant acronyms (e.g., EBITDA, EPS) if standard.
+"""
+
+QUERY_EXPANSION_USER_PROMPT = """\
+### Current User Input:
+{user_query}
 """
 
 # Answer Correctness against Ground Truth

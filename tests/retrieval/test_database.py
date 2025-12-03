@@ -79,27 +79,36 @@ async def test_get_related_chunks_with_filter(
     from src.data_models.retrieval import DocumentMetadata
 
     doc_filter = [DocumentMetadata(year="2023", quarter="Q1")]
-    points = await db.get_related_chunks(
+    points = await db.get_related_points(
         query="test query", doc_metadata_filter=doc_filter
     )
 
     chunks = [point.payload["text"] for point in points]
 
     assert chunks == ["found chunk"]
-    mock_async_qdrant_client.query_points.assert_awaited_once()
+    mock_async_qdrant_client.query_points.assert_awaited()
+    assert mock_async_qdrant_client.query_points.call_count == 1
 
     call_args, call_kwargs = mock_async_qdrant_client.query_points.call_args
-    query_filter = call_kwargs["query_filter"]
 
-    assert query_filter.must[0].key == "user_id"
-    assert query_filter.should is not None
-    assert len(query_filter.should) == 1
-    assert query_filter.should[0].must[0].key == "metadata.year"
-    assert query_filter.should[0].must[0].match.value == "2023"
-
-    # Verify hybrid search with prefetch
+    # In the new implementation, the filter is passed inside the prefetch objects
+    # and NOT as a top-level argument to query_points
     prefetch = call_kwargs["prefetch"]
     assert len(prefetch) == 2  # Should have both dense and sparse prefetch
+
+    # Check filter in the first prefetch (dense)
+    query_filter = prefetch[0].filter
+    assert query_filter.must[0].key == "user_id"
+    assert query_filter.must[1].key == "metadata.year"
+    assert query_filter.must[1].match.value == "2023"
+    assert query_filter.must[2].key == "metadata.quarter"
+    assert query_filter.must[2].match.value == "Q1"
+
+    # Check filter in the second prefetch (sparse)
+    query_filter_sparse = prefetch[1].filter
+    assert query_filter_sparse.must[0].key == "user_id"
+    assert query_filter_sparse.must[1].key == "metadata.year"
+    assert query_filter_sparse.must[1].match.value == "2023"
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Output - VeFRA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 98%;
+            margin: 0 auto;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin: 0;
+            padding: 0;
+        }
+
+        .meta-stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        .mini-card {
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 6px;
+            border-left: 3px solid #3498db;
+            min-width: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .query-section {
+            margin-bottom: 30px;
+        }
+
+        .query-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #e67e22;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .info-label {
+            font-size: 0.7em;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        .info-value {
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .answer-box {
+            background-color: #e8f6f3;
+            border: 1px solid #d0ece7;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+        }
+
+        .prompt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .prompt-box {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prompt-header {
+            background: #f1f2f6;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #555;
+            border-bottom: 1px solid #e1e4e8;
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .prompt-content {
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #fafafa;
+            font-size: 0.75em;
+            white-space: pre;
+            word-break: break-all;
+            border-radius: 0 0 6px 6px;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;
+            color: #444;
+        }
+
+        .chunk-card {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: transform 0.2s;
+        }
+
+        .chunk-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .chunk-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .chunk-tag {
+            background: #edf2f7;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .chunk-text {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95em;
+            background: #fafafa;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="top-header">
+            <h1>Debug Information</h1>
+
+            <div class="meta-stats">
+                <div class="mini-card">
+                    <div class="info-label">Price per 1000 requests</div>
+                    <div class="info-value">~${{ debug_data.price_per_1000_requests }}</div>
+                </div>
+
+                <div class="mini-card">
+                    <div class="info-label">Duration</div>
+                    <div class="info-value">{{ debug_data.duration }}s</div>
+                </div>
+
+                <div class="mini-card">
+                    <div class="info-label">User ID</div>
+                    <div class="info-value">{{ debug_data.user }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="query-section">
+            <div class="query-card">
+                <div class="info-label">Question</div>
+                <div class="info-value">{{ debug_data.question }}</div>
+            </div>
+        </div>
+
+        <div class="query-section">
+            <div class="query-card">
+                <div class="info-label">Reworded Question</div>
+                <div class="info-value">{{ debug_data.reworded_question }}</div>
+            </div>
+        </div>
+
+        <h2>Generated Answer</h2>
+        <div class="answer-box">
+            {{ debug_data.answer }}
+        </div>
+
+        <h2>Documents Used</h2>
+        {% if debug_data.documents %}
+        <ul>
+            {% for doc in debug_data.documents %}
+            <li>{{ doc.year }} {{ doc.quarter }} {{debug_data.user | upper}}.pdf</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state">No documents recorded.</div>
+        {% endif %}
+
+        <h2>Final Prompt</h2>
+        <div class="prompt-grid">
+            <div class="prompt-box">
+                <div class="prompt-header">
+                    <span>User Prompt</span>
+                </div>
+                <div class="prompt-content">
+                    {% if debug_data.user_prompt %}
+                    {{ debug_data.user_prompt }}
+                    {% else %}
+                    No user prompt recorded.{% endif %}</div>
+            </div>
+        </div>
+
+        <h2>Expanded Queries & Retrieved Chunks</h2>
+
+        {% if debug_data.expanded_queries %}
+        {% for query_obj in debug_data.expanded_queries %}
+
+        <div class="query-group" style="margin-bottom: 30px;">
+
+            <h3 style="margin-bottom: 10px;">Query {{ loop.index }}: "{{ query_obj.query }}"</h3>
+
+            {% if query_obj.chunks %}
+            {% for chunk in query_obj.chunks %}
+            <div class="chunk-card">
+                <div class="chunk-meta">
+                    <span class="chunk-tag">Chunk: {{ loop.index }}</span>
+                    <span class="chunk-tag">Year: {{ chunk.document.year }}</span>
+                    <span class="chunk-tag">Quarter: {{ chunk.document.quarter }}</span>
+                </div>
+                <div class="chunk-text">{{ chunk.text }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state">No chunks retrieved for this query.</div>
+            {% endif %}
+
+        </div>
+        <hr> {% endfor %}
+        {% else %}
+        <div class="empty-state">No expanded queries found.</div>
+        {%endif %}
+
+        <h2>All Retrieved Chunks (Unique)</h2>
+        {% if debug_data.unique_retrieved_chunks %}
+        {% for chunk in debug_data.unique_retrieved_chunks %}
+        <div class="chunk-card">
+            <div class="chunk-meta">
+                <span class="chunk-tag">#{{ loop.index }}</span>
+                <span class="chunk-tag">Year: {{ chunk.document.year }}</span>
+                <span class="chunk-tag">Quarter: {{ chunk.document.quarter }}</span>
+            </div>
+            <div class="chunk-text">{{ chunk.text }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">No chunks retrieved.</div>
+        {% endif %}
+
+    </div>
+</body>
+
+</html>
