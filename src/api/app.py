@@ -1,4 +1,3 @@
-import json
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -7,6 +6,9 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -24,7 +26,11 @@ from ..utils.dependency import (
 )
 from ..utils.exceptions import VeFRAException
 from .input_validation import get_existing_user, validate_user_id
-from .service import process_csv_upload, process_document_ingestion
+from .service import (
+    get_evaluation_results,
+    process_csv_upload,
+    process_document_ingestion,
+)
 
 
 @asynccontextmanager
@@ -42,6 +48,9 @@ app = FastAPI(
     description="API to accept PDF documents.",
     lifespan=lifespan,
 )
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 templates = Jinja2Templates(directory=PROJECT_ROOT_PATH / "src" / "api" / "templates")
 
@@ -89,6 +98,7 @@ app.add_middleware(LoggingMiddleware)
 
 
 @app.post("/{user_id}/uploadfile/")
+@limiter.limit("2/minute")
 async def create_upload_file(
     user_id: str = Depends(validate_user_id),
     file: UploadFile = File(...),
@@ -136,6 +146,7 @@ async def create_upload_file(
 
 
 @app.get("/{user_id}/generate/")
+@limiter.limit("5/minute")
 async def generate(
     query: str,
     user_id: str = Depends(get_existing_user),
@@ -180,6 +191,7 @@ async def generate(
 
 
 @app.get("/{user_id}/debug_generate/")
+@limiter.limit("2/minute")
 async def debug_generate(
     request: Request,
     query: str,
@@ -222,79 +234,23 @@ async def debug_generate(
 
 
 @app.get("/{user_id}/evaluate/")
+@limiter.limit("10/hour")
 async def evaluate(user_id: str = Depends(get_existing_user)):
     """
     Runs the evaluation of the RAG system.
     """
+
     try:
         df = await run_evaluation(user_id=user_id)
 
-        n_total = len(df)
-        n_successful = df[df["evaluation_status"] == "SUCCESS"].shape[0]
-
-        correctness_scores = df["answer_correctness_score"].dropna()
-        mean_correctness = (
-            correctness_scores.mean() if not correctness_scores.empty else -1.0
-        )
-
-        groundedness_scores = df["groundedness_score"].dropna()
-        mean_groundedness = (
-            groundedness_scores.mean() if not groundedness_scores.empty else -1.0
-        )
-
-        context_coverage_scores = df["context_coverage_score"].dropna()
-        mean_context_coverage = (
-            context_coverage_scores.mean()
-            if not context_coverage_scores.empty
-            else -1.0
-        )
-
-        context_recall_hit_scores = df["context_recall_hit_score"].dropna()
-        mean_context_recall = (
-            context_recall_hit_scores.mean()
-            if not context_recall_hit_scores.empty
-            else -1.0
-        )
-
-        numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
-        mean_numerical_accuracy = (
-            numerical_accuracy_scores.mean()
-            if not numerical_accuracy_scores.empty
-            else -1.0
-        )
-
-        all_chunk_relevance_scores = []
-        for _, row in df.iterrows():
-            if row["chunk_relevance_scores"] and row["evaluation_status"] == "SUCCESS":
-                # chunk_relevance_scores is a JSON string of list of LLMJudgeScore dicts
-                chunk_scores_list = json.loads(row["chunk_relevance_scores"])
-                question_chunk_scores = [
-                    s["score"]
-                    for s in chunk_scores_list
-                    if s and "score" in s and s["score"] is not None
-                ]
-                if question_chunk_scores:
-                    all_chunk_relevance_scores.extend(question_chunk_scores)
-
-        mean_chunk_relevance = (
-            sum(all_chunk_relevance_scores) / len(all_chunk_relevance_scores)
-            if all_chunk_relevance_scores
-            else -1.0
-        )
+        metrics = get_evaluation_results(df=df)
+        metrics["evaluation_results"] = df.to_dict(orient="records")
 
         return JSONResponse(
-            content={
-                "total_questions": n_total,
-                "successful_evaluations": n_successful,
-                "mean_answer_correctness": round(mean_correctness, 2),
-                "mean_groundedness": round(mean_groundedness, 2),
-                "mean_context_coverage": round(mean_context_coverage, 2),
-                "context_recall_hit_score": round(mean_context_recall, 2),
-                "mean_chunk_relevance": round(mean_chunk_relevance, 2),
-                "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
-            },
+            content=metrics,
             status_code=200,
         )
+
     except VeFRAException as e:
         logger.error(
             "VeFRA Exception caught during evaluation.",
@@ -314,6 +270,7 @@ async def evaluate(user_id: str = Depends(get_existing_user)):
 
 
 @app.post("/{user_id}/evaluate_file/")
+@limiter.limit("10/hour")
 async def evaluate_file(
     user_id: str = Depends(get_existing_user),
     file: UploadFile = File(...),
@@ -321,83 +278,24 @@ async def evaluate_file(
     """
     Runs the evaluation of the RAG system.
     """
+
     csv_filepath = None
     temp_filepath = None
+
     try:
         if file:
-            # Validate and process uploaded CSV
             model = CSVUploadModel(file=file, user_id=user_id)
-            # Save to temporary file
+
             temp_filepath = await process_csv_upload(model, is_temporary=True)
             csv_filepath = temp_filepath
 
         df = await run_evaluation(user_id=user_id, csv_filepath=csv_filepath)
 
-        n_total = len(df)
-        n_successful = df[df["evaluation_status"] == "SUCCESS"].shape[0]
-
-        correctness_scores = df["answer_correctness_score"].dropna()
-        mean_correctness = (
-            correctness_scores.mean() if not correctness_scores.empty else -1.0
-        )
-
-        groundedness_scores = df["groundedness_score"].dropna()
-        mean_groundedness = (
-            groundedness_scores.mean() if not groundedness_scores.empty else -1.0
-        )
-
-        context_coverage_scores = df["context_coverage_score"].dropna()
-        mean_context_coverage = (
-            context_coverage_scores.mean()
-            if not context_coverage_scores.empty
-            else -1.0
-        )
-
-        context_recall_hit_scores = df["context_recall_hit_score"].dropna()
-        mean_context_recall = (
-            context_recall_hit_scores.mean()
-            if not context_recall_hit_scores.empty
-            else -1.0
-        )
-
-        numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
-        mean_numerical_accuracy = (
-            numerical_accuracy_scores.mean()
-            if not numerical_accuracy_scores.empty
-            else -1.0
-        )
-
-        all_chunk_relevance_scores = []
-        for _, row in df.iterrows():
-            if row["chunk_relevance_scores"] and row["evaluation_status"] == "SUCCESS":
-                # chunk_relevance_scores is a JSON string of list of LLMJudgeScore dicts
-                chunk_scores_list = json.loads(row["chunk_relevance_scores"])
-                question_chunk_scores = [
-                    s["score"]
-                    for s in chunk_scores_list
-                    if s and "score" in s and s["score"] is not None
-                ]
-                if question_chunk_scores:
-                    all_chunk_relevance_scores.extend(question_chunk_scores)
-
-        mean_chunk_relevance = (
-            sum(all_chunk_relevance_scores) / len(all_chunk_relevance_scores)
-            if all_chunk_relevance_scores
-            else 0.0
-        )
+        metrics = get_evaluation_results(df=df)
+        metrics["evaluation_results"] = df.to_dict(orient="records")
 
         return JSONResponse(
-            content={
-                "total_questions": n_total,
-                "successful_evaluations": n_successful,
-                "mean_answer_correctness": round(mean_correctness, 2),
-                "mean_groundedness": round(mean_groundedness, 2),
-                "mean_context_coverage": round(mean_context_coverage, 2),
-                "context_recall_hit_score": round(mean_context_recall, 2),
-                "mean_chunk_relevance": round(mean_chunk_relevance, 2),
-                "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
-                "evaluation_results": df.to_dict(orient="records"),
-            },
+            content=metrics,
             status_code=200,
         )
     except VeFRAException as e:
@@ -417,7 +315,6 @@ async def evaluate_file(
         )
         raise HTTPException(status_code=500, detail="Internal server error.") from e
     finally:
-        # Cleanup temporary file if it exists
         if temp_filepath and os.path.exists(temp_filepath):
             try:
                 os.remove(temp_filepath)

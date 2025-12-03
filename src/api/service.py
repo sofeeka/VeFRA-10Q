@@ -1,6 +1,8 @@
+import json
 import os
 from pathlib import Path
 
+import pandas as pd
 from loguru import logger
 
 from ..data_models.api import CSVUploadModel, FileUploadModel
@@ -173,3 +175,72 @@ async def process_csv_upload(model: CSVUploadModel, is_temporary: bool = False):
     )
 
     return model.filepath
+
+
+def get_evaluation_results(df: pd.DataFrame) -> dict:
+    """
+    Extract evaluation results from the DataFrame.
+    """
+    n_total = len(df)
+    n_successful = df[df["evaluation_status"] == "SUCCESS"].shape[0]
+
+    correctness_scores = df["answer_correctness_score"].dropna()
+    mean_correctness = (
+        correctness_scores.mean() if not correctness_scores.empty else -1.0
+    )
+
+    groundedness_scores = df["groundedness_score"].dropna()
+    mean_groundedness = (
+        groundedness_scores.mean() if not groundedness_scores.empty else -1.0
+    )
+
+    context_coverage_scores = df["context_coverage_score"].dropna()
+    mean_context_coverage = (
+        context_coverage_scores.mean() if not context_coverage_scores.empty else -1.0
+    )
+
+    context_recall_hit_scores = df["context_recall_hit_score"].dropna()
+    mean_context_recall = (
+        context_recall_hit_scores.mean()
+        if not context_recall_hit_scores.empty
+        else -1.0
+    )
+
+    numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
+    mean_numerical_accuracy = (
+        numerical_accuracy_scores.mean()
+        if not numerical_accuracy_scores.empty
+        else -1.0
+    )
+
+    all_chunk_relevance_scores = []
+    for _, row in df.iterrows():
+        if row["chunk_relevance_scores"] and row["evaluation_status"] == "SUCCESS":
+            # chunk_relevance_scores is a JSON string of list of LLMJudgeScore dicts
+            chunk_scores_list = json.loads(row["chunk_relevance_scores"])
+            question_chunk_scores = [
+                s["score"]
+                for s in chunk_scores_list
+                if s and "score" in s and s["score"] is not None
+            ]
+            if question_chunk_scores:
+                all_chunk_relevance_scores.extend(question_chunk_scores)
+
+    mean_chunk_relevance = (
+        sum(all_chunk_relevance_scores) / len(all_chunk_relevance_scores)
+        if all_chunk_relevance_scores
+        else -1.0
+    )
+
+    content = {
+        "total_questions": n_total,
+        "successful_evaluations": n_successful,
+        "mean_answer_correctness": round(mean_correctness, 2),
+        "mean_groundedness": round(mean_groundedness, 2),
+        "mean_context_coverage": round(mean_context_coverage, 2),
+        "context_recall_hit_score": round(mean_context_recall, 2),
+        "mean_chunk_relevance": round(mean_chunk_relevance, 2),
+        "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
+        "evaluation_results": df.to_dict(orient="records"),
+    }
+    return content
