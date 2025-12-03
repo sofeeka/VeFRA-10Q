@@ -1,4 +1,4 @@
-# VeFRA-10Q: Vention Financial Report Analyser
+# VeFRA: Vention Financial Report Analyser
 
 VeFRA-10Q is a Retrieval-Augmented Generation (RAG) system designed to answer questions from financial reports (10-Q). It leverages a vector database for efficient retrieval and Large Language Models (LLMs) for accurate answer generation.
 
