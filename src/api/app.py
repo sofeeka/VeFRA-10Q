@@ -249,6 +249,13 @@ async def evaluate(user_id: str = Depends(get_existing_user)):
             else -1.0
         )
 
+        context_recall_hit_scores = df["context_recall_hit_score"].dropna()
+        mean_context_recall = (
+            context_recall_hit_scores.mean()
+            if not context_recall_hit_scores.empty
+            else -1.0
+        )
+
         numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
         mean_numerical_accuracy = (
             numerical_accuracy_scores.mean()
@@ -272,7 +279,7 @@ async def evaluate(user_id: str = Depends(get_existing_user)):
         mean_chunk_relevance = (
             sum(all_chunk_relevance_scores) / len(all_chunk_relevance_scores)
             if all_chunk_relevance_scores
-            else 0.0
+            else -1.0
         )
 
         return JSONResponse(
@@ -282,6 +289,7 @@ async def evaluate(user_id: str = Depends(get_existing_user)):
                 "mean_answer_correctness": round(mean_correctness, 2),
                 "mean_groundedness": round(mean_groundedness, 2),
                 "mean_context_coverage": round(mean_context_coverage, 2),
+                "context_recall_hit_score": round(mean_context_recall, 2),
                 "mean_chunk_relevance": round(mean_chunk_relevance, 2),
                 "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
             },
@@ -345,6 +353,13 @@ async def evaluate_file(
             else -1.0
         )
 
+        context_recall_hit_scores = df["context_recall_hit_score"].dropna()
+        mean_context_recall = (
+            context_recall_hit_scores.mean()
+            if not context_recall_hit_scores.empty
+            else -1.0
+        )
+
         numerical_accuracy_scores = df["numerical_accuracy_score"].dropna()
         mean_numerical_accuracy = (
             numerical_accuracy_scores.mean()
@@ -378,6 +393,7 @@ async def evaluate_file(
                 "mean_answer_correctness": round(mean_correctness, 2),
                 "mean_groundedness": round(mean_groundedness, 2),
                 "mean_context_coverage": round(mean_context_coverage, 2),
+                "context_recall_hit_score": round(mean_context_recall, 2),
                 "mean_chunk_relevance": round(mean_chunk_relevance, 2),
                 "mean_numerical_accuracy": round(mean_numerical_accuracy, 2),
                 "evaluation_results": df.to_dict(orient="records"),

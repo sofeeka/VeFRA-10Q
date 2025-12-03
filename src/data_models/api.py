@@ -5,6 +5,7 @@ from fastapi import UploadFile
 from loguru import logger
 from pydantic import BaseModel, field_validator, model_validator
 
+from src.evaluation.rag_evaluator import ground_truth_answer, question, question_id
 from src.utils.config import get_user_sources_filepath
 from src.utils.exceptions import (
     VeFRA_DataValidationError,
@@ -176,10 +177,10 @@ class CSVUploadModel(BaseModel):
             csv_content = content.decode("utf-8")
             df = pd.read_csv(StringIO(csv_content))
 
-            if "Question Id" not in df.columns:
-                df["Question Id"] = range(1, len(df) + 1)
+            if question_id not in df.columns:
+                df[question_id] = range(1, len(df) + 1)
 
-            strict_required_cols = ["Question", "Ground Truth Answer"]
+            strict_required_cols = [question, ground_truth_answer]
             missing_cols = [
                 col for col in strict_required_cols if col not in df.columns
             ]

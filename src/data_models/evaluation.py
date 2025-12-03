@@ -10,17 +10,15 @@ class EvaluationQuestion(BaseModel):
     """
 
     question_id: str = Field(..., description="Unique identifier for the question")
-    query: str = Field(..., description="The user's original query to the RAG system")
+    question: str = Field(
+        ..., description="The user's original query to the RAG system"
+    )
     ground_truth_answer: str = Field(
         ..., description="The expert-provided correct answer"
     )
-    ground_truth_context_chunks: list[str] | None = Field(
+    ground_truth_context: str | None = Field(
         None,
-        description="Optional: list of ground truth relevant context chunks (if available for precise retrieval evaluation)",
-    )
-    expected_metadata: dict[str, str] | None = Field(
-        None,
-        description="Optional: Expected document metadata (e.g., {'year': '2023', 'quarter': 'Q1'}) to evaluate retrieval intent parsing",
+        description="Optional: required piece of context that must be included in the retrieved content",
     )
 
 
@@ -60,6 +58,8 @@ class EvaluationResult(BaseModel):
 
     context_coverage: LLMJudgeScore = Field(default_factory=LLMJudgeScore)
     chunk_relevance_scores: list[LLMJudgeScore] | None = None
+
+    context_recall_hit: LLMJudgeScore = Field(default_factory=LLMJudgeScore)
 
     numerical_accuracy: LLMJudgeScore = Field(default_factory=LLMJudgeScore)
 

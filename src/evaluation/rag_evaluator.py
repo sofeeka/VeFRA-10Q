@@ -30,8 +30,9 @@ from src.utils.dependency import (
 from src.utils.exceptions import VeFRA_EvaluationError, VeFRAException
 
 question_id = "Question Id"
-ground_truth_answer = "Ground Truth Answer"
-query = "Question"
+ground_truth_answer = "Answer"
+question = "Question"
+ground_truth_context = "Context"
 
 
 def _get_evaluation_session_filepath(user_id: str, timestamp_str: str) -> Path:
@@ -92,7 +93,7 @@ async def _evaluate_single_question(
     # Initial default result with question data
     current_result = EvaluationResult(
         question_id=question_data.question_id,
-        query=question_data.query,
+        query=question_data.question,
         ground_truth_answer=question_data.ground_truth_answer,
         rag_response="",
         retrieved_chunks=[],
@@ -107,9 +108,9 @@ async def _evaluate_single_question(
 
         debug_data = debug_manager.get_data()
         debug_data.user = pipeline.db.user_id
-        debug_data.question = question_data.query
+        debug_data.question = question_data.question
 
-        rag_response = await pipeline.run(question_data.query)
+        rag_response = await pipeline.run(question_data.question)
         retrieved_chunks_list = debug_data.final_retrieved_chunks
         full_context = "\n---\n".join(retrieved_chunks_list)
 
@@ -120,7 +121,7 @@ async def _evaluate_single_question(
 
         metric_tasks = {
             "answer_correctness": metrics_evaluator.evaluate_answer_correctness(
-                query=question_data.query,
+                query=question_data.question,
                 ground_truth_answer=question_data.ground_truth_answer,
                 rag_response=rag_response,
             ),
@@ -128,8 +129,13 @@ async def _evaluate_single_question(
                 rag_response=rag_response, full_context=full_context
             ),
             "context_coverage": metrics_evaluator.evaluate_context_coverage(
-                query=question_data.query,
+                query=question_data.question,
                 ground_truth_answer=question_data.ground_truth_answer,
+                full_context=full_context,
+            ),
+            "context_recall_hit": metrics_evaluator.evaluate_context_recall_hit_rate(
+                query=question_data.question,
+                ground_truth_context=question_data.ground_truth_context,
                 full_context=full_context,
             ),
             # "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
@@ -223,7 +229,7 @@ async def run_evaluation(
 
     full_df = pd.read_csv(benchmark)
 
-    required_cols = [question_id, query, ground_truth_answer]
+    required_cols = [question_id, question, ground_truth_answer, ground_truth_context]
     if not all(col in full_df.columns for col in required_cols):
         raise VeFRA_EvaluationError(
             f"Evaluation dataset must contain columns: {required_cols}. Found: {full_df.columns.tolist()}"
@@ -234,8 +240,9 @@ async def run_evaluation(
     questions: list[EvaluationQuestion] = [
         EvaluationQuestion(
             question_id=str(row[question_id]),
-            query=row[query],
+            question=row[question],
             ground_truth_answer=row[ground_truth_answer],
+            ground_truth_context=row.get(ground_truth_context, None),
         )
         for _, row in full_df.iterrows()
     ]
@@ -289,6 +296,7 @@ async def run_evaluation(
     mean_correctness = results_df["answer_correctness_score"].dropna().mean()
     mean_groundedness = results_df["groundedness_score"].dropna().mean()
     mean_context_coverage = results_df["context_coverage_score"].dropna().mean()
+    mean_context_recall_hit = results_df["context_recall_hit_score"].dropna().mean()
 
     logger.info(
         f"Evaluation completed. {n_success}/{n_total} questions processed successfully."
@@ -300,6 +308,8 @@ async def run_evaluation(
         logger.info(f"Mean Groundedness: {mean_groundedness:.2f}")
     if pd.notna(mean_context_coverage):
         logger.info(f"Mean Context Coverage: {mean_context_coverage:.2f}")
+    if pd.notna(mean_context_recall_hit):
+        logger.info(f"Mean Context Recall Hit: {mean_context_recall_hit:.2f}")
 
     final_results_csv_path = (
         get_user_evaluations_folder(user_id=user_id)
