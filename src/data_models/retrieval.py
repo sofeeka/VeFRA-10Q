@@ -78,6 +78,7 @@ class QueryExpansionModel(BaseModel):
     A DTO for query expansion.
     """
 
+    reworded_query: str
     queries: list[str]
 
 

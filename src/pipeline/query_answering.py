@@ -102,8 +102,11 @@ class QueryAnsweringPipeline:
             return []
 
     async def _expand_query(self, query: str) -> list[str]:
-        queries: list[str] = await expand_query(query=query)
-        return queries
+        result: tuple[str, list[str]] = await expand_query(
+            query=query, user_id=self.db.user_id
+        )
+        reworded, expanded = result
+        return reworded, expanded
 
     async def _retrieve(
         self,
@@ -224,9 +227,9 @@ Question: {query}
         if self.config.document_extraction:
             metadata = await self._extract_metadata(query=query)
 
-        queries = [query]
+        reworded, expanded = await self._expand_query(query=query)
+        queries = [reworded]
         if self.config.query_expansion:
-            expanded = await self._expand_query(query=query)
             queries.extend(expanded)
 
         points = await self._retrieve(queries=queries, document_metadata=metadata)

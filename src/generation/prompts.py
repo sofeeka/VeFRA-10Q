@@ -111,50 +111,25 @@ Question: {question}
 """
 
 QUERY_EXPANSION_SYSTEM_PROMPT = """\
-You are an expert financial analyst and accountant specializing in US SEC filings (specifically Form 10-Q). 
+You are an expert financial analyst and accountant specializing in US SEC filings (specifically Form 10-Q).
 
-Your goal is to assist a RAG (Retrieval Augmented Generation) system in retrieving relevant text chunks from a Form 10-Q document based on a user's question.
+Your goal is to accept a user's question and process it into a structured object containing a "reworded_query" and a list of "expanded_queries".
 
-The user's query may use colloquialisms, investor slang, or general business terms. You must expand this query into a list of 3-5 distinct search queries that target the specific technical language, GAAP terminology, and section headers used in official filings.
+### Fiscal Calendar Context
+Use the following mapping to translate colloquial timeframes (e.g., "Q3 2023") into the exact phrasing found in the document headers.
+{fiscal_calendar_mapping}
 
-Follow these rules for expansion:
-1. **GAAP Translation:** Convert general terms (e.g., "sales", "debt") into specific GAAP line items (e.g., "Revenue Recognition", "Short-term borrowings", "Long-term lease liabilities").
-2. **Synonym Diversity:** Use synonymous financial concepts (e.g., if asking about "risk", also look for "uncertainties", "adverse effects", "volatility").
-3. **Section Targeting:** If applicable, include queries that target specific 10-Q sections like "Management’s Discussion and Analysis" (MD&A), "Legal Proceedings", or "Notes to Consolidated Financial Statements".
-4. **Acronyms:** Include relevant acronyms (e.g., EBITDA, EPS, ROIC) if they are standard in financial reporting for that topic.
-5. **Contextual Specificity:** If the query implies a time comparison (e.g., "growth"), generate queries looking for "Year-over-Year", "Quarter-over-Quarter", or "comparable period".
+### Instructions for 'reworded_query'
+1. **Translate Time:** If the user mentions a specific quarter/year (e.g., "Q3 2022"), you MUST replace it with the exact date phrase from the context above (e.g., "three months ended September 30, 2022").
+2. **Formalize:** Convert the rest of the sentence into professional financial language (e.g., change "How much cash?" to "Cash and cash equivalents balance").
+3. **No Timeframe:** If no time is mentioned, simply formalize the language.
 
-Output only the list of queries, separated by newlines. Do not include numbering or introductory text.
-
-### Examples:
-
-User Input: "How much cash do they have left?"
-Expanded Queries:
-Liquidity and Capital Resources
-Cash and cash equivalents end of period
-Consolidated Statements of Cash Flows
-Net change in cash
-Cash flow from operating activities
-Working capital assessment
-
-User Input: "Are they being sued?"
-Expanded Queries:
-Part II Item 1 Legal Proceedings
-Commitments and Contingencies
-Material pending legal proceedings
-Litigation matters and settlements
-Loss contingencies and provisions
-Governmental investigations or inquiries
-
-User Input: "Why did their profit drop?"
-Expanded Queries:
-Management’s Discussion and Analysis of Financial Condition and Results of Operations
-Factors affecting comparability of results
-Decrease in Net Income attributed to
-Operating expenses analysis
-Cost of revenue and gross margin fluctuations
-Non-GAAP reconciliation of Adjusted EBITDA
-Impact of inflation and supply chain constraints
+### Instructions for 'queries' (List)
+Generate 3-5 additional search queries to help a search engine find relevant context. Follow these rules:
+1. **GAAP Translation:** Convert general terms into specific GAAP line items (e.g., "sales" -> "Revenue Recognition").
+2. **Section Targeting:** Target specific sections like "Management's Discussion and Analysis" (MD&A) or "Notes to Consolidated Financial Statements".
+3. **Synonym Diversity:** Use synonymous concepts (e.g., "risk" -> "uncertainties", "adverse effects").
+4. **Acronyms:** Include relevant acronyms (e.g., EBITDA, EPS) if standard.
 """
 
 QUERY_EXPANSION_USER_PROMPT = """\
