@@ -1,3 +1,5 @@
+import asyncio
+
 from loguru import logger
 from qdrant_client.conversions.common_types import ScoredPoint
 
@@ -215,7 +217,21 @@ Question: {query}
 
         start_time = time.monotonic()
 
-        validity_result = await self._check_question_validity(query=query)
+        validity_task = self._check_question_validity(query=query)
+        expansion_task = self._expand_query(query=query)
+
+        if self.config.document_extraction:
+            metadata_task = self._extract_metadata(query=query)
+        else:
+
+            async def _empty_metadata():
+                return []
+
+            metadata_task = _empty_metadata()
+
+        validity_result, (reworded, expanded), metadata = await asyncio.gather(
+            validity_task, expansion_task, metadata_task
+        )
 
         if validity_result.validity == QuestionValidity.IRRELEVANT:
             logger.warning(f"Question marked as irrelevant: {query}")
@@ -225,11 +241,6 @@ Question: {query}
                 "management's discussion and analysis, and other topics typically found in quarterly reports."
             )
 
-        metadata = []
-        if self.config.document_extraction:
-            metadata = await self._extract_metadata(query=query)
-
-        reworded, expanded = await self._expand_query(query=query)
         queries = [reworded]
         if self.config.query_expansion:
             queries.extend(expanded)
