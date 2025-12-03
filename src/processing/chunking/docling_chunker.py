@@ -23,9 +23,9 @@ from loguru import logger
 from transformers import AutoTokenizer
 from typing_extensions import override
 
-from src.processing.chunking.base_chunker import BaseChunker
-from src.utils.config import CHUNKING_EMBEDDING_MODEL, get_user_tables_folder
-from src.utils.exceptions import VeFRA_FileIOError, VeFRA_TableExtractionError
+from ...utils.config import CHUNKING_EMBEDDING_MODEL, get_user_tables_folder
+from ...utils.exceptions import VeFRA_FileIOError, VeFRA_TableExtractionError
+from .base_chunker import BaseChunker
 
 
 class VeFRATableSerializer(MarkdownTableSerializer):

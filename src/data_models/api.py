@@ -5,9 +5,9 @@ from fastapi import UploadFile
 from loguru import logger
 from pydantic import BaseModel, field_validator, model_validator
 
-from src.evaluation.rag_evaluator import ground_truth_answer, question, question_id
-from src.utils.config import get_user_sources_filepath
-from src.utils.exceptions import (
+from ..evaluation.rag_evaluator import ground_truth_answer, question, question_id
+from ..utils.config import get_user_sources_filepath
+from ..utils.exceptions import (
     VeFRA_DataValidationError,
     VeFRA_FileConflictError,
     VeFRA_InvalidFileNameError,

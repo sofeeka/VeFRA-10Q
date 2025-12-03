@@ -3,10 +3,10 @@ from pathlib import Path
 
 from loguru import logger
 
-from src.data_models.api import CSVUploadModel, FileUploadModel
-from src.pipeline.data_ingestion import ingest_single_document
-from src.utils.dependency import get_user_knowledge_base
-from src.utils.exceptions import VeFRA_FileIOError
+from ..data_models.api import CSVUploadModel, FileUploadModel
+from ..pipeline.data_ingestion import ingest_single_document
+from ..utils.dependency import get_user_knowledge_base
+from ..utils.exceptions import VeFRA_FileIOError
 
 
 async def save_uploaded_document(model: FileUploadModel):
@@ -118,7 +118,7 @@ async def save_uploaded_csv(model: CSVUploadModel, is_temporary: bool = False):
         model.filepath = Path(path)
     elif model.filepath is None:
         # Fallback if not temporary but no path set (shouldn't happen in current flow but good for safety)
-        from src.utils.config import get_user_evaluations_folder
+        from ..utils.config import get_user_evaluations_folder
 
         model.filepath = (
             get_user_evaluations_folder(user_id=model.user_id) / model.file.filename

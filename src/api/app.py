@@ -10,21 +10,21 @@ from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from src.api.input_validation import get_existing_user, validate_user_id
-from src.api.service import process_csv_upload, process_document_ingestion
-from src.data_models.api import CSVUploadModel, FileUploadModel
-from src.debug.debug import debug_manager
-from src.evaluation.rag_evaluator import run_evaluation
-from src.pipeline.query_answering import QueryAnsweringPipeline
-from src.scripts.logging_config import setup_logging
-from src.scripts.setup_database import setup_database
-from src.utils.config import MAIN_RESPONSE_GENERATION_MODEL, PROJECT_ROOT_PATH
-from src.utils.dependency import (
+from ..data_models.api import CSVUploadModel, FileUploadModel
+from ..debug.debug import debug_manager
+from ..evaluation.rag_evaluator import run_evaluation
+from ..pipeline.query_answering import QueryAnsweringPipeline
+from ..scripts.logging_config import setup_logging
+from ..scripts.setup_database import setup_database
+from ..utils.config import MAIN_RESPONSE_GENERATION_MODEL, PROJECT_ROOT_PATH
+from ..utils.dependency import (
     get_async_generator,
     get_reranking_model,
     get_user_knowledge_base,
 )
-from src.utils.exceptions import VeFRAException
+from ..utils.exceptions import VeFRAException
+from .input_validation import get_existing_user, validate_user_id
+from .service import process_csv_upload, process_document_ingestion
 
 
 @asynccontextmanager

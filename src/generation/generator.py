@@ -9,8 +9,8 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from src.data_models.generation import ResponseModel
-from src.generation.base_generator import BaseGenerator
+from ..data_models.generation import ResponseModel
+from .base_generator import BaseGenerator
 
 
 class Generator(BaseGenerator):

@@ -1,9 +1,8 @@
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.processing.document_processor import process_document_for_chunking
-from src.utils.exceptions import VeFRA_ChunkingError
-
+from ...utils.exceptions import VeFRA_ChunkingError
+from ..document_processor import process_document_for_chunking
 from .base_chunker import BaseChunker
 
 
@@ -69,7 +68,7 @@ class RecursiveChunker(BaseChunker):
             return [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
 
         separators = ["\n\n\n\n", "\n\n", "\n", ". ", " ", ""]
-        from src.utils.config import DEFAULT_CHUNK_SIZE
+        from ...utils.config import DEFAULT_CHUNK_SIZE
 
         # Call the helper function with the instance's state
         return _split_text(

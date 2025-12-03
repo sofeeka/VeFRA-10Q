@@ -3,7 +3,7 @@ from loguru import logger
 from qdrant_client import models
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 
-from src.utils.config import SPARSE_EMBEDDING_MODEL_NAME
+from ...utils.config import SPARSE_EMBEDDING_MODEL_NAME
 
 
 class SparseEmbeddingModel:

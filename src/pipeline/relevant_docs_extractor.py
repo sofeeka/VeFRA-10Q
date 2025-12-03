@@ -1,13 +1,13 @@
 import re
 
-from src.data_models.retrieval import DocumentMetadata, Intent, RelevantDocumentsModel
-from src.generation.prompts import (
+from ..data_models.retrieval import DocumentMetadata, Intent, RelevantDocumentsModel
+from ..generation.prompts import (
     CHOOSING_RELEVANT_DOCUMENTS_PROMPT,
     CHOOSING_RELEVANT_DOCUMENTS_SYSTEM_PROMPT,
 )
-from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
-from src.utils.dependency import get_async_generator
-from src.utils.exceptions import VeFRA_MetadataExtractionError
+from ..utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL, get_user_sources_folder
+from ..utils.dependency import get_async_generator
+from ..utils.exceptions import VeFRA_MetadataExtractionError
 
 FILENAME_PATTERN = re.compile(r"(\d{4})[\s_-]+(Q[1-3])", re.IGNORECASE)
 

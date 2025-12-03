@@ -2,8 +2,8 @@ import re
 
 from fastapi import Depends, Path
 
-from src.utils.config import get_user_sources_folder
-from src.utils.exceptions import VeFRA_DataValidationError
+from ..utils.config import get_user_sources_folder
+from ..utils.exceptions import VeFRA_DataValidationError
 
 VALID_USER_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 

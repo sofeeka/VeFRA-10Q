@@ -1,12 +1,12 @@
 from loguru import logger
 
-from src.data_models.retrieval import QueryExpansionModel
-from src.generation.prompts import (
+from ..data_models.retrieval import QueryExpansionModel
+from ..generation.prompts import (
     QUERY_EXPANSION_SYSTEM_PROMPT,
     QUERY_EXPANSION_USER_PROMPT,
 )
-from src.utils.config import MSFT_FISCAL_MAP, NVDA_FISCAL_MAP, QUERY_EXPANSION_MODEL
-from src.utils.dependency import get_async_generator
+from ..utils.config import MSFT_FISCAL_MAP, NVDA_FISCAL_MAP, QUERY_EXPANSION_MODEL
+from ..utils.dependency import get_async_generator
 
 
 async def expand_query(query: str, user_id: str) -> tuple[str, list[str]]:

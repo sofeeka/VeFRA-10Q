@@ -7,15 +7,14 @@ import pandas as pd
 from loguru import logger
 from tqdm.asyncio import tqdm
 
-from evaluation.evaluation_service import MetricsEvaluator
-from src.data_models.evaluation import (
+from ..data_models.evaluation import (
     EvaluationQuestion,
     EvaluationResult,
 )
-from src.debug.debug import debug_manager
-from src.generation.prompts import EVALUATION_SYSTEM_PROMPT
-from src.pipeline.query_answering import QueryAnsweringPipeline
-from src.utils.config import (
+from ..debug.debug import debug_manager
+from ..generation.prompts import EVALUATION_SYSTEM_PROMPT
+from ..pipeline.query_answering import QueryAnsweringPipeline
+from ..utils.config import (
     EVALUATION_CONCURRENCY_LIMIT,
     EVALUATION_MODEL,
     MAIN_RESPONSE_GENERATION_MODEL,
@@ -23,11 +22,12 @@ from src.utils.config import (
     NVDA_BENCHMARK,
     get_user_evaluations_folder,
 )
-from src.utils.dependency import (
+from ..utils.dependency import (
     get_async_generator,
     get_user_knowledge_base,
 )
-from src.utils.exceptions import VeFRA_EvaluationError, VeFRAException
+from ..utils.exceptions import VeFRA_EvaluationError, VeFRAException
+from .evaluation_service import MetricsEvaluator
 
 question_id = "Question Id"
 ground_truth_answer = "Answer"

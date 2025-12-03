@@ -4,19 +4,19 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 from qdrant_client import AsyncQdrantClient
 
-from processing.chunking.docling_chunker import DoclingChunker
-from processing.chunking.recursive_chunker import RecursiveChunker
-from src.generation.async_generator import AsyncGenerator
-from src.generation.generator import Generator
-from src.generation.prompts import SYSTEM_PROMPT
-from src.processing.document_parser import DocumentParser
-from src.retrieval.database import UserKnowledgeBase
-from src.retrieval.database_manager import QdrantCollectionManager
-from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
-from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
-from src.retrieval.reranker import FinancialReranker
-from src.utils.api_key_manager import get_openai_api_key
-from src.utils.config import (
+from ..generation.async_generator import AsyncGenerator
+from ..generation.generator import Generator
+from ..generation.prompts import SYSTEM_PROMPT
+from ..processing.chunking.docling_chunker import DoclingChunker
+from ..processing.chunking.recursive_chunker import RecursiveChunker
+from ..processing.document_parser import DocumentParser
+from ..retrieval.database import UserKnowledgeBase
+from ..retrieval.database_manager import QdrantCollectionManager
+from ..retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
+from ..retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
+from ..retrieval.reranker import FinancialReranker
+from .api_key_manager import get_openai_api_key
+from .config import (
     DEFAULT_QDRANT_COLLECTION_NAME,
     DEFAULT_QDRANT_STORAGE_PATH,
     DENSE_EMBEDDING_MODEL_NAME,

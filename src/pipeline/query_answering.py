@@ -3,21 +3,21 @@ import asyncio
 from loguru import logger
 from qdrant_client.conversions.common_types import ScoredPoint
 
-from src.data_models.retrieval import (
+from ..data_models.retrieval import (
     DocumentMetadata,
     QuestionValidity,
     QuestionValidityModel,
 )
-from src.debug.debug import DebugData_Chunk, DebugData_Document, debug_manager
-from src.generation.async_generator import AsyncGenerator
-from src.generation.prompts import QUESTION_VALIDITY_PROMPT
-from src.pipeline.query_expansion import expand_query
-from src.pipeline.relevant_docs_extractor import get_relevant_docs
-from src.processing.document_processor import process_chunk_after_retrieval
-from src.retrieval.database import UserKnowledgeBase
-from src.utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL
-from src.utils.dependency import get_async_generator, get_reranking_model
-from src.utils.exceptions import VeFRA_GenerationError
+from ..debug.debug import DebugData_Chunk, DebugData_Document, debug_manager
+from ..generation.async_generator import AsyncGenerator
+from ..generation.prompts import QUESTION_VALIDITY_PROMPT
+from ..processing.document_processor import process_chunk_after_retrieval
+from ..retrieval.database import UserKnowledgeBase
+from ..utils.config import CHOOSING_RELEVANT_DOCUMENTS_MODEL
+from ..utils.dependency import get_async_generator, get_reranking_model
+from ..utils.exceptions import VeFRA_GenerationError
+from .query_expansion import expand_query
+from .relevant_docs_extractor import get_relevant_docs
 
 
 class QueryAnsweringConfig:

@@ -3,7 +3,7 @@ from functools import lru_cache
 
 import dotenv
 
-from src.utils.exceptions import VeFRA_ConfigurationError
+from .exceptions import VeFRA_ConfigurationError
 
 dotenv.load_dotenv()
 

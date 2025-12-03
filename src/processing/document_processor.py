@@ -7,8 +7,8 @@ from docling.datamodel.document import TableItem, TextItem
 from docling_core.types.doc import DoclingDocument
 from loguru import logger
 
-from src.utils.config import get_user_tables_folder
-from src.utils.exceptions import (
+from ..utils.config import get_user_tables_folder
+from ..utils.exceptions import (
     VeFRA_FileIOError,
     VeFRA_ProcessingError,
     VeFRA_TableExtractionError,

@@ -2,9 +2,9 @@ import asyncio
 
 from loguru import logger
 
-from src.data_models.evaluation import LLMJudgeScore
-from src.generation.async_generator import AsyncGenerator
-from src.generation.prompts import (
+from ..data_models.evaluation import LLMJudgeScore
+from ..generation.async_generator import AsyncGenerator
+from ..generation.prompts import (
     ANSWER_CORRECTNESS_JUDGE_PROMPT,
     CHUNK_RELEVANCE_JUDGE_PROMPT,
     CONTEXT_COVERAGE_JUDGE_PROMPT,

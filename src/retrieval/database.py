@@ -6,16 +6,16 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.conversions.common_types import ScoredPoint
 from qdrant_client.http.models import PointStruct
 
-from src.data_models.retrieval import ChunkPayload, DocumentMetadata
-from src.retrieval.embedding.dense_embedding_model import DenseEmbeddingModel
-from src.retrieval.embedding.sparse_embedding_model import SparseEmbeddingModel
-from src.utils.config import (
+from ..data_models.retrieval import ChunkPayload, DocumentMetadata
+from ..utils.config import (
     CHUNKS_PER_DOC,
     DEFAULT_SEARCH_K,
     DENSE_DEFAULT,
     SPARSE_DEFAULT,
 )
-from src.utils.exceptions import VeFRA_DatabaseError, VeFRA_DataInsertionError
+from ..utils.exceptions import VeFRA_DatabaseError, VeFRA_DataInsertionError
+from .embedding.dense_embedding_model import DenseEmbeddingModel
+from .embedding.sparse_embedding_model import SparseEmbeddingModel
 
 
 class UserKnowledgeBase:
