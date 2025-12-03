@@ -62,11 +62,11 @@ class QueryAnsweringPipeline:
             )
             return response.output_parsed
         except Exception:
-            logger.error(
+            logger.warning(
                 "Failed to check question validity. Assuming question is relevant.",
                 exc_info=True,
             )
-            return QuestionValidityModel(validity=QuestionValidity.IRRELEVANT)
+            return QuestionValidityModel(validity=QuestionValidity.RELEVANT)
 
     async def _extract_metadata(self, query: str) -> list[DocumentMetadata]:
         try:
