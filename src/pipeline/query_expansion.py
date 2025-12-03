@@ -6,7 +6,7 @@ from ..generation.prompts import (
     QUERY_EXPANSION_USER_PROMPT,
 )
 from ..generation.token_counter import TokenCounter
-from ..utils.config import MSFT_FISCAL_MAP, NVDA_FISCAL_MAP, QUERY_EXPANSION_MODEL
+from ..utils.config import QUERY_EXPANSION_MODEL, get_fiscal_map_for_user_id
 from ..utils.dependency import get_async_generator
 
 
@@ -17,7 +17,7 @@ async def expand_query(
 ) -> tuple[str, list[str]]:
     logger.info(f"Expanding the query: {query}", query=query)
 
-    fiscal_map = MSFT_FISCAL_MAP if user_id == "msft" else NVDA_FISCAL_MAP
+    fiscal_map = get_fiscal_map_for_user_id(user_id=user_id)
     generator = get_async_generator(
         model=QUERY_EXPANSION_MODEL,
         system_prompt=QUERY_EXPANSION_SYSTEM_PROMPT.format(

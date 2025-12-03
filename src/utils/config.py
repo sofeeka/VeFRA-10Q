@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from loguru import logger
+
 PROJECT_ROOT_PATH = Path(__file__).resolve().parent.parent.parent
 
 # data
@@ -75,6 +77,20 @@ NVDA_FISCAL_MAP = {
     "Q2 2023": "three months ended July 30, 2023",
     "Q3 2023": "three months ended October 29, 2023",
 }
+
+
+def get_fiscal_map_for_user_id(user_id: str):
+    match user_id:
+        case "msft":
+            return MSFT_FISCAL_MAP
+        case "nvda":
+            return NVDA_FISCAL_MAP
+        case _:
+            logger.warning(
+                f"User ID {user_id} is not supported, there is no known fiscal calendar mapping for this user. Proceeding without a mapping, the LLM may get confuded."
+            )
+            return {}
+
 
 # full
 MSFT_BENCHMARK = DATA_DIR_PATH / "msft_benchmark.csv"

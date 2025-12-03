@@ -86,6 +86,32 @@ The API uses `{user_id}` in the path to ensure workspace isolation. A `user_id` 
     *   Runs the evaluation pipeline using a custom benchmark file uploaded by the user.
     *   **Body**: `multipart/form-data` with a `file` field containing a CSV.
 
+## Supported Users
+
+The system currently supports two users:
+
+-   `msft`: Microsoft
+-   `nvda`: NVIDIA
+
+If you want to add another user, you need to add the fiscal calendar mapping to `src/utils/config.py` and add the benchmark file to `data/`.
+
+```python
+# Example for MSFT
+MSFT_FISCAL_MAP = {
+    "Q3 2022": "three months ended September 30, 2022",
+    "Q1 2023": "three months ended December 31, 2022",
+    "Q2 2023": "three months ended March 31, 2023",
+    "Q3 2023": "three months ended September 30, 2023",
+}
+
+def get_fiscal_map_for_user_id(user_id: str):
+    match user_id:
+        ...
+        case 'msft':
+            return MSFT_FISCAL_MAP
+        ...
+```
+
 ## Evaluation
 
 The system includes a robust evaluation framework to measure performance.
