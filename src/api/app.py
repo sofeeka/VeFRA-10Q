@@ -135,7 +135,7 @@ async def create_upload_file(
             },
         )
     except Exception as e:
-        filename = model.file.filename if model else "unknown"
+        filename = model.file.filename if model and model.file else "unknown"
         logger.error(
             "Unhandled exception during file upload.",
             user_id=user_id,
