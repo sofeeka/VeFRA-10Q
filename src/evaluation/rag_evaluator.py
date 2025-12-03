@@ -139,10 +139,10 @@ async def _evaluate_single_question(
                 full_context=full_context,
             ),
             "chunk_relevance_scores": metrics_evaluator.evaluate_chunk_relevance(
-                question_data.query, retrieved_chunks_list
+                question_data.question, retrieved_chunks_list
             ),
             "numerical_accuracy": metrics_evaluator.evaluate_financial_fact_accuracy(
-                query=question_data.query,
+                query=question_data.question,
                 ground_truth_answer=question_data.ground_truth_answer,
                 rag_response=rag_response,
             ),

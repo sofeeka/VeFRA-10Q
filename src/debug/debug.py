@@ -58,9 +58,6 @@ class DebugData:
 
 
 class DebugManager:
-    _debug_mode: bool = False
-    _debug_data: DebugData = None
-
     def __init__(self):
         self._debug_mode = False
         self._debug_data = DebugData()
